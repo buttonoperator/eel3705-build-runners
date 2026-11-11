@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BCD Counter Build Runner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one step on screen at a time. Progress pinned at top, everything else folded away. */
+:root{
+  --bg:#f3f1ec; --surface:#fffefb; --fg:#1d2024; --muted:#6a6f78; --line:#d9d5cc;
+  --accent:#1f5f8b; --accent-soft:#e3edf4; --done:#2f9e5e;
+  --board:#e4e1d8; --board-edge:#c9c4b8; --chan:#d0ccc1; --hole:#a9a399;
+  --ic:#2b2e33; --ic-fg:#e9e6df; --res:#cfa86a; --led:#4fbf72;
+  --sel:#c2410c;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#15171a; --surface:#1d2024; --fg:#e8e6e1; --muted:#9aa0a8; --line:#32363c;
+  --accent:#6fb3dd; --accent-soft:#1c2a33; --done:#4fbf72;
+  --board:#2a2d32; --board-edge:#3a3e45; --chan:#1f2226; --hole:#5d636b;
+  --ic:#0e1013; --ic-fg:#d6d3cc; --res:#b08a4e; --led:#4fbf72;
+  --sel:#f0914a;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --sel:#f0914a;
+  --bg:#15171a; --surface:#1d2024; --fg:#e8e6e1; --muted:#9aa0a8; --line:#32363c;
+  --accent:#6fb3dd; --accent-soft:#1c2a33; --done:#4fbf72;
+  --board:#2a2d32; --board-edge:#3a3e45; --chan:#1f2226; --hole:#5d636b;
+  --ic:#0e1013; --ic-fg:#d6d3cc; --res:#b08a4e; --led:#4fbf72;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);line-height:1.5;margin:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 80px}
+
+/* two-column shell: step rail beside the working area */
+.shell{display:flex;flex-direction:column;gap:24px;margin-top:22px}
+.rail{display:flex;flex-direction:column;gap:13px;min-width:0}
+.main{display:flex;flex-direction:column;gap:22px;min-width:0}
+.railnow{display:flex;flex-direction:column;gap:3px;padding:11px 13px;border-radius:10px;
+  background:var(--accent-soft);border:1px solid var(--line)}
+.railnow .rn{font:600 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent)}
+.railnow b{font-size:15px;line-height:1.25}
+.railnow .rw{font:500 11px var(--mono);color:var(--muted)}
+@media (min-width:1180px){
+  .wrap{max-width:1560px}
+  .mast,.ref,footer,.top > *{max-width:1000px}
+  .shell{display:grid;grid-template-columns:264px minmax(0,1fr);align-items:start;gap:26px}
+  .rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 86px);
+    max-height:calc(100vh - env(safe-area-inset-top,0px) - 104px);overflow:auto;
+    padding-right:4px}
+  .railnow{position:sticky;top:0;z-index:2}
+}
+
+/* masthead */
+.mast{padding-block:26px 18px;border-bottom:1px solid var(--line)}
+.eyebrow{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent)}
+.mast h1{margin:9px 0 0;font-size:31px;line-height:1.12;letter-spacing:-.022em;font-weight:700}
+.mast h1 .sub{display:block;font-size:17px;font-weight:500;color:var(--muted);
+  letter-spacing:-.01em;margin-top:5px}
+.lede{margin:13px 0 0;color:var(--fg);font-size:14.5px;max-width:62ch}
+.lede + .lede{margin-top:8px;color:var(--muted)}
+.specs{display:flex;gap:6px;flex-wrap:wrap;margin-top:15px}
+.specs span{font:600 10.5px var(--mono);border:1px solid var(--line);border-radius:999px;
+  padding:4px 10px;color:var(--muted);background:var(--surface);letter-spacing:.03em}
+.pzoom{display:flex;align-items:center;gap:2px;margin-left:auto}
+.pzoom .lbl{font:500 10px var(--mono);color:var(--muted);margin-right:4px;
+  letter-spacing:.08em;text-transform:uppercase}
+.pzoom button{padding:3px 0;width:24px;font:600 12px var(--mono);line-height:1;border-radius:5px}
+.pzoom button.wide{width:auto;padding:3px 7px;font-size:10px}
+.pzoom .zlab{font:600 10px var(--mono);min-width:34px}
+
+
+/* test values, in the rail under the step list */
+.inputs{display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);
+  border-radius:11px;padding:12px;background:var(--surface)}
+.inhd{font:600 10px var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.op{display:flex;align-items:center;gap:7px}
+.oplab{font:700 13px var(--mono);width:12px}
+.op input{width:44px;padding:4px 5px;font:600 13px var(--mono);text-align:center;
+  background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px}
+.bits{display:flex;gap:3px;margin-left:auto}
+.bits button{width:21px;padding:4px 0;font:600 10px var(--mono);line-height:1;border-radius:5px;
+  border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer}
+.bits button[aria-pressed="true"]{background:#d1495b;border-color:#d1495b;color:#fff}
+.lsum{font:600 12.5px var(--mono);color:var(--accent);background:var(--accent-soft);
+  border-radius:7px;padding:6px 10px;text-align:center}
+.segbox{display:flex;align-items:center;gap:12px}
+#seg7 .sg{fill:var(--line);opacity:.3}
+#seg7 .sg.on{fill:#d1495b;opacity:1}
+.lread{font:600 12px var(--mono);line-height:1.35}
+.tens{display:flex;align-items:center;gap:6px;font:500 10.5px var(--mono);color:var(--muted);
+  margin-top:5px}
+.tens i{width:12px;height:12px;border-radius:50%;background:var(--line);display:block;flex:0 0 auto}
+.tens i.on{background:#d1495b;box-shadow:0 0 8px rgba(209,73,91,.6)}
+.lnote{font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--muted);margin:0}
+.outs{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:10.5px}
+.outs td{padding:3px 0;border-top:1px solid var(--line);vertical-align:baseline}
+.outs td.k{color:var(--muted);white-space:nowrap;padding-right:7px}
+.outs td.v{font-weight:600;text-align:right;white-space:nowrap}
+.outs tr.pend td{opacity:.45}
+.outs tr.hd td{border-top:none;padding-top:7px;color:var(--muted);font-size:9.5px;
+  letter-spacing:.1em;text-transform:uppercase;font-weight:600}
+.lwarn{color:#d1495b}
+
+/* per-IC readouts inside the pin map */
+#cm .rostem{stroke:var(--line);stroke-width:1.5;stroke-dasharray:3 3}
+#cm .robox{fill:var(--bg);stroke:var(--line);stroke-width:1}
+#cm .robar{fill:var(--line)}
+#cm .rotag{font:600 8px var(--mono);letter-spacing:.14em;fill:var(--muted)}
+#cm .rol1,#cm .rol2{font:600 11px var(--mono);fill:var(--muted)}
+#cm .ro.live .robox{stroke:var(--done)}
+#cm .ro.live .robar{fill:var(--done)}
+#cm .ro.live .rotag{fill:var(--done)}
+#cm .ro.live .rol1,#cm .ro.live .rol2{fill:var(--fg)}
+#cm .ro.tgt .robox{stroke-dasharray:4 3}
+
+/* progress header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);
+  padding-block:14px 12px;display:flex;flex-direction:column;gap:9px;border-bottom:1px solid var(--line)}
+.topline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.count{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.04em}
+.phase{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.pct{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.track{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.fill{height:100%;background:var(--accent);width:0;border-radius:3px}
+
+/* current step */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin-top:22px;display:flex;flex-direction:column;gap:16px}
+.card h2{font-size:clamp(22px,5vw,30px);line-height:1.15;margin:0;font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+.card .where{font-family:var(--mono);font-size:12.5px;color:var(--accent);background:var(--accent-soft);
+  align-self:flex-start;padding:5px 10px;border-radius:6px}
+.card p{margin:0;font-size:16px;max-width:52ch}
+.wires{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums}
+.wires td{padding:7px 0;border-bottom:1px solid var(--line)}
+.wires tr:last-child td{border-bottom:0}
+.wires td.a{width:44%}
+.wires td.arr{width:34px;color:var(--muted);text-align:center}
+.wires td.n{width:auto;color:var(--muted);text-align:right;font-size:12px}
+.flag{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border-radius:8px;padding:11px 13px;
+  font-size:14px;border:1px solid var(--line)}
+.flag b{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+  flex:none;padding-top:3px}
+.acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);
+  border-radius:11px;padding:11px;background:var(--surface)}
+.acts .go{flex:1 1 100%}
+.acts #back{flex:1 1 auto}
+.acts .keys{flex:1 1 100%;margin:1px 0 0}
+button{font-family:var(--sans);cursor:pointer;border-radius:9px;border:1px solid var(--line);
+  background:var(--surface);color:var(--fg);font-size:15px;padding:12px 18px;font-weight:500}
+button.go{background:var(--accent);border-color:var(--accent);color:#fff;flex:1 1 auto;min-width:160px;font-weight:600}
+button.go.redo{background:var(--surface);color:var(--fg);border-color:var(--line)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.4;cursor:default}
+
+/* step map */
+.map{margin-top:26px;display:flex;flex-direction:column;gap:14px}
+.maph{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.grp{display:flex;flex-direction:column;gap:6px}
+.grpn{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
+.pills{display:flex;flex-wrap:wrap;gap:5px}
+.pill{width:30px;height:30px;padding:0;border-radius:8px;font-family:var(--mono);font-size:11.5px;
+  display:grid;place-items:center;color:var(--muted)}
+.pill[data-s="done"]{background:var(--done);border-color:var(--done);color:#fff}
+.pill[data-s="now"]{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+
+/* reference drawers */
+.ref{margin-top:34px;display:flex;flex-direction:column;gap:8px}
+details{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+summary{cursor:pointer;padding:14px 16px;font-weight:600;font-size:15px;list-style:none;
+  display:flex;align-items:center;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font-family:var(--mono);color:var(--accent);font-size:15px;width:12px}
+details[open] summary::before{content:"\2212"}
+.body{padding:0 16px 18px;display:flex;flex-direction:column;gap:14px}
+.body p{font-size:14.5px;margin:0;max-width:60ch;color:var(--fg)}
+h3{font-size:12px;margin:0;font-family:var(--mono);font-weight:600;letter-spacing:.06em}
+table.t{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+.t th,.t td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.t th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.t td.m{font-family:var(--mono)}
+.t td.dim{color:var(--muted)}
+.tbl{overflow-x:auto}
+.goal{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;
+  padding:10px 13px;display:flex;flex-direction:column;gap:4px}
+.goal b{font:600 10px var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--accent)}
+.goal span{font-size:13.5px;line-height:1.55}
+.eq{font-family:var(--mono);font-size:14px;background:var(--bg);border:1px solid var(--line);
+  border-radius:6px;padding:11px 13px;overflow-x:auto}
+.frame{border:1px solid var(--line);border-radius:8px;background:var(--board-edge);
+  overflow-x:auto;overflow-y:hidden;padding:12px}
+.frame.flat{background:var(--surface)}
+.frame svg{display:block;height:auto;min-width:1180px;max-width:none}
+.frame.flat svg{min-width:1340px}
+.hint{font-family:var(--mono);font-size:11px;color:var(--muted)}
+footer{margin-top:30px;color:var(--muted);font-size:12px;font-family:var(--mono);
+  border-top:1px solid var(--line);padding-top:14px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+footer button{font-size:12px;padding:6px 11px;font-family:var(--mono)}
+/* live chip pin map */
+.cmap{border:1px solid var(--line);border-radius:10px;background:var(--bg);
+  overflow-x:auto;overflow-y:hidden;padding:10px}
+.cmap{max-height:clamp(240px,34vh,470px)}
+.cmap svg{display:block;height:auto;width:100%;max-width:none}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;border:1px solid var(--line);display:block}
+.legend i.n{background:var(--accent);border-color:var(--accent)}
+.legend i.d{background:var(--done);border-color:var(--done)}
+.legend i.u{background:var(--surface)}
+#cm .cbody{fill:var(--ic);stroke:#000;stroke-width:1}
+#cm .cbody.seat{stroke:var(--accent);stroke-width:2.5}
+#cm .cnotch{fill:var(--bg);stroke:none}
+#cm .cref{font:600 13px var(--mono);fill:var(--ic-fg);text-anchor:middle}
+#cm .cpart{font:400 9.5px var(--mono);fill:#9aa0a8;text-anchor:middle}
+#cm .pad{fill:var(--surface);stroke:var(--line);stroke-width:1}
+#cm .pnum{font:600 9.5px var(--mono);fill:var(--muted);text-anchor:middle}
+#cm .pnet{font:600 10px var(--mono);fill:#8d929a}
+#cm .pds{font:400 7.5px var(--mono);fill:#6d727a;letter-spacing:.04em}
+#cm .pnl{text-anchor:start}
+#cm .pnr{text-anchor:end}
+#cm .pin.wired .pad{fill:var(--done);stroke:var(--done)}
+#cm .pin.wired .pnum{fill:#fff}
+#cm .pin.wired .pnet{fill:var(--ic-fg)}
+#cm .pin.now .pad{fill:var(--accent);stroke:var(--accent)}
+#cm .pin.now .pnum{fill:#fff}
+#cm .pin.now .pnet{fill:#fff;font-weight:600}
+#cm .pin[data-net]{cursor:pointer}
+#cm .pin[data-net]:hover .pad{stroke:var(--sel);stroke-width:2}
+/* traced net */
+#cm .pin.sel .pad{stroke:var(--sel);stroke-width:2.5}
+#cm .pin.sel .pnet{fill:var(--sel)}
+#cm.tracing .pin:not(.sel){opacity:.35}
+#cm.tracing .ro,#cm.tracing .rostem{opacity:.45}
+#bb .sw.sel{opacity:1}
+#bb .w.sel{stroke-width:4.4}
+#bb .wd.sel{r:5}
+#bb.tracing .sw:not(.sel){opacity:.06}
+.trace{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-family:var(--mono);
+  font-size:11px;color:var(--muted);min-height:22px}
+.trace b{color:var(--sel);font-size:12px}
+.trace .pins{color:var(--fg)}
+.trace button{font:600 10px var(--mono);padding:3px 8px;border-radius:5px;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+/* breadboard diagram */
+#bb .bd{fill:var(--board);stroke:var(--board-edge);stroke-width:1.5}
+#bb .ch{fill:var(--chan)}
+#bb .rp{stroke:#d1495b;stroke-width:1.2;opacity:.65}
+#bb .rn{stroke:#3d4451;stroke-width:1.2;opacity:.65}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #bb .rn{stroke:#9aa0a8}}
+:root[data-theme="dark"] #bb .rn{stroke:#9aa0a8}
+#bb .hl{fill:var(--hole)}
+#bb .rowlab,#bb .collab{font:400 9px var(--mono);fill:var(--muted);text-anchor:middle}
+#bb .btitle{font:600 12px var(--mono);fill:var(--fg);letter-spacing:.1em}
+#bb .ic{fill:var(--ic);stroke:#000;stroke-width:1}
+#bb .notch{fill:var(--board);stroke:none}
+#bb .iclab{font:600 12px var(--mono);fill:var(--ic-fg);text-anchor:middle;letter-spacing:.06em}
+#bb .pinlab{font:500 8.5px var(--mono);fill:var(--muted);text-anchor:start}
+#bb .w{fill:none;stroke-linecap:round;stroke-linejoin:round}
+#bb .res{fill:var(--res);stroke:#6b5428;stroke-width:1}
+#bb .reslab{font:500 9px var(--mono);fill:var(--muted);text-anchor:middle}
+#bb .led{fill:var(--led);stroke:#1f6b3c;stroke-width:1.2}
+#bb.h-pwr .g-pwr,#bb.h-in .g-in,#bb.h-z .g-z,#bb.h-corr .g-corr,
+#bb.h-sbus .g-sbus,#bb.h-seg .g-seg,#bb.h-tie .g-tie{display:none}
+/* view tabs in the step card */
+.tabs{display:flex;gap:6px;margin:16px 0 0;align-items:center}
+.ptitle{font:600 10px var(--mono);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 6px}
+.zoom{margin-left:auto;display:flex;align-items:center;gap:2px}
+.zoom button{padding:3px 0;width:26px;font:600 12px var(--mono);line-height:1;border-radius:5px}
+.zoom button{font:600 12px var(--mono);border:1px solid var(--line);border-radius:5px;
+  background:var(--surface);color:var(--muted);cursor:pointer}
+.zoom button.wide{width:auto;padding:3px 8px;font-size:10px}
+.zoom .zlab{font:600 10px var(--mono);min-width:36px}
+.panes{display:flex;flex-direction:column;gap:11px;min-width:0}
+.tabs button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.zlab{font:600 11px var(--mono);color:var(--muted);min-width:44px;text-align:center}
+.undo{background:none;border:none;color:var(--muted);font:500 11.5px var(--mono);
+  text-decoration:underline;cursor:pointer;padding:4px 2px}
+.undo:hover{color:var(--fg)}
+.keys{font:500 10px var(--mono);color:var(--muted);margin-top:9px;line-height:1.7}
+.keys kbd{font-family:var(--mono);border:1px solid var(--line);border-radius:4px;
+  padding:1px 5px;background:var(--bg);font-size:10.5px}
+/* explainer */
+.why{border-left:3px solid var(--accent);padding:2px 0 2px 13px;margin:14px 0}
+.why h4{margin:0 0 6px;font:600 13px var(--mono);letter-spacing:.04em}
+.why p{margin:0 0 7px}
+.warn{border-left-color:#d1495b}
+.t td.hi{background:var(--bg);font-weight:600}
+.t tr.pass td:last-child{color:var(--done)}
+
+.bbwrap{border:1px solid var(--line);border-radius:10px;background:var(--board-edge);
+  overflow:auto;max-height:clamp(260px,42vh,640px);margin-top:0;padding:5px}
+.bbwrap svg{display:block;height:auto;width:100%;max-width:none}
+.bbfoot{display:flex;align-items:center;gap:14px;margin-top:9px;flex-wrap:wrap}
+.bbfoot label{font:500 11.5px var(--mono);color:var(--muted);display:flex;
+  align-items:center;gap:6px;cursor:pointer}
+.bbnote{font:500 11.5px var(--mono);color:var(--muted)}
+/* step-scoped breadboard: dim every wire, light the ones for this step */
+#bb.step .sw{opacity:.07}
+#bb.step .sw.wdone{opacity:.72}
+#bb.step .sw.wnow{opacity:1}
+#bb.step .w.wnow{stroke-width:3.8}
+#bb.step .wd.wnow{r:4.4}
+@media (prefers-reduced-motion:no-preference){
+  #bb .sw{transition:opacity .2s ease}
+}
+/* flow diagram */
+#fl .pkg{fill:var(--surface);stroke:var(--fg);stroke-width:1.5}
+#fl .pkgt{font:600 13px var(--mono);fill:var(--fg);text-anchor:middle}
+#fl .pkgs{font:400 10.5px var(--mono);fill:var(--muted);text-anchor:middle}
+#fl .pkgr{stroke:var(--line);stroke-width:1}
+#fl .pkgx{font:400 9.5px var(--mono);fill:var(--muted);text-anchor:middle}
+#fl .pd{fill:var(--bg);stroke:var(--fg);stroke-width:1.2}
+#fl .pn{font:600 9px var(--mono);fill:var(--fg);text-anchor:middle}
+#fl .pname{font:500 11px var(--mono);fill:var(--fg)}
+#fl .pl{text-anchor:start}
+#fl .pr{text-anchor:end}
+#fl .gate{fill:var(--surface);stroke:var(--fg);stroke-width:1.5}
+#fl .lead{stroke:var(--fg);stroke-width:1.3}
+#fl .gl{font:600 11px var(--mono);fill:var(--fg);text-anchor:middle}
+#fl .grp{font:600 11px var(--mono);fill:var(--muted);letter-spacing:.1em}
+#fl .net{fill:none;stroke-width:1.8;stroke-linejoin:round}
+#fl .nl{font:600 10.5px var(--mono);text-anchor:middle}
+#fl .gndl{font:500 10px var(--mono);fill:var(--muted);text-anchor:end}
+#fl .gndl2{font:500 10px var(--mono);fill:var(--muted);text-anchor:start}
+#fl .nc{font:400 9.5px var(--mono);fill:var(--muted);text-anchor:end}
+#fl .sw{fill:var(--surface);stroke:var(--fg);stroke-width:1.2}
+#fl .swl{font:600 11px var(--mono);fill:var(--fg);text-anchor:middle}
+#fl .disp{fill:var(--surface);stroke:var(--fg);stroke-width:1.5}
+#fl .segl{stroke:var(--muted);stroke-width:5;stroke-linecap:round;opacity:.42}
+#fl .segt{font:600 9px var(--mono);fill:var(--accent);text-anchor:middle}
+#fl .segp{font:600 9.5px var(--mono);fill:#c2410c;text-anchor:middle}
+#fl .res{fill:var(--res);stroke:#6b5428;stroke-width:1}
+#fl .ledd{fill:var(--led);stroke:#1f6b3c;stroke-width:1.2}
+#fl .gnds{stroke:var(--fg);stroke-width:2}
+#fl .div{stroke:var(--line);stroke-width:1.5;stroke-dasharray:5 5}
+#fl .bdiv{font:600 10px var(--mono);fill:var(--muted);text-anchor:end;letter-spacing:.1em}
+#fl .bdiv2{font:600 10px var(--mono);fill:var(--muted);text-anchor:start;letter-spacing:.1em}
+@media (prefers-reduced-motion:no-preference){
+  .fill{transition:width .25s ease}
+  button{transition:background .15s,border-color .15s}
+}
+/* ---- HOP 3 additions ---- */
+[hidden]{display:none !important}
+.cntrow{display:flex;align-items:center;gap:6px}
+.cntrow button{width:30px;padding:5px 0;font:600 14px var(--mono);line-height:1;border-radius:6px}
+.cntrow output{min-width:30px;text-align:center;font:700 18px var(--mono)}
+.qb{display:flex;gap:3px;margin-left:auto}
+.qb span{display:grid;place-items:center;width:25px;height:24px;border-radius:5px;
+  border:1px solid var(--line);background:var(--bg);color:var(--muted);font:600 9px var(--mono)}
+.qb span.on{background:#2f7fd6;border-color:#2f7fd6;color:#fff}
+.rvrow{display:flex;align-items:center;gap:8px;font:600 11px var(--mono)}
+.rvrow input{flex:1 1 auto;min-width:0;accent-color:var(--accent)}
+.rvrow output{min-width:52px;text-align:right;color:var(--muted)}
+button.runb{padding:8px 10px;font:600 12px var(--mono);border-radius:7px}
+button.runb[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tens i.clk.on{background:#4fbf72;box-shadow:0 0 8px rgba(79,191,114,.65)}
+#bb .raillab{font:600 11px var(--mono);fill:var(--muted);text-anchor:middle}
+#bb .pot{fill:#2f6f9e;stroke:#1d4766;stroke-width:1}
+#bb .potk{fill:#e9e6df;stroke:#1d4766;stroke-width:1}
+#bb .cap{fill:#2d4f7c;stroke:#13243b;stroke-width:1}
+#bb .capp{font:700 11px var(--mono);fill:var(--fg);text-anchor:middle}
+#bb .mod{fill:#2a5b3a;fill-opacity:.82;stroke:#173623;stroke-width:1.2}
+#bb .modpin{fill:#f2c94c;stroke:#6b5a1c;stroke-width:1}
+#bb .modlab{font:600 11px var(--mono);fill:#e9f5ec;text-anchor:middle;letter-spacing:.12em}
+#bb .disp{fill:#1b1d21;stroke:#000;stroke-width:1}
+#bb .dglyph{fill:none;stroke:#5b2a2a;stroke-width:4;stroke-linecap:round}
+#bb .reslab.rl{text-anchor:start}
+#bb .reslab.rr{text-anchor:end}
+#bb .grplab{font:600 10px var(--mono);fill:var(--muted);text-anchor:middle}
+#bb .pinlab{font:500 7px var(--mono);fill:#b9b4aa}
+#bb .part.seat .ic,#bb .part.seat .disp{stroke:var(--accent);stroke-width:3}
+#fl .sm{font-size:9px}
+#fl .ctr{text-anchor:middle}
+#fl .pot{fill:#2f6f9e;stroke:#1d4766}
+#fl .arrow{fill:var(--fg)}
+#fl .capl{stroke:var(--fg);stroke-width:2.2}
+#fl .capc{fill:none;stroke:var(--fg);stroke-width:2.2}
+#fl .eqs{font:600 11px var(--mono);fill:var(--fg)}
+#fl .net.dash{stroke-dasharray:5 4}
+#fl .grp{font:600 11px var(--mono);fill:var(--muted);letter-spacing:.1em}
+.frame.flat svg{min-width:1300px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <div class="eyebrow">EEL 3705 &middot; Hands-On Project 3</div>
+  <h1>BCD Counter, 0 to 9
+    <span class="sub">555 clock, decade counter, seven-segment display</span></h1>
+  <p class="lede">A 555 timer ticks about once a second. A 74LS90 counts the ticks in BCD, a
+  CD4511 decodes the count, and a seven-segment display shows 0 through 9 on repeat. Every part
+  comes out of the course kit, on the kit's one breadboard.</p>
+  <p class="lede">This page is the build itself. It walks all 27 steps one at a time and lights
+  up the exact pins and holes for the step you are on, so you never have to hunt through a
+  static diagram to find your place.</p>
+  <div class="specs">
+    <span>3 ICs</span><span>1 breadboard</span><span>27 steps</span>
+    <span>NE555</span><span>74LS90</span><span>CD4511</span><span>kit parts only</span>
+  </div>
+</header>
+
+<div class="top">
+  <div class="topline">
+    <span class="count" id="count">Step 1 of 27</span>
+    <span class="phase" id="phase">Seat the parts</span>
+    <span class="pct" id="pct">0%</span>
+    <span class="pzoom">
+      <span class="lbl">page</span>
+      <button id="pzout" aria-label="Make the page smaller" title="Smaller">&minus;</button>
+      <span class="zlab" id="pzlab">100%</span>
+      <button id="pzin" aria-label="Make the page bigger" title="Bigger">+</button>
+      <button id="pzfit" class="wide" aria-label="Reset page size" title="Reset">reset</button>
+    </span>
+  </div>
+  <div class="track"><div class="fill" id="fill"></div></div>
+</div>
+
+<div class="shell">
+
+<aside class="rail">
+  <div class="railnow">
+    <span class="rn" id="rcount">Step 1 of 27</span>
+    <b id="rtitle"></b>
+    <span class="rw" id="rwhere"></span>
+  </div>
+  <div class="maph">All steps &mdash; tap any to jump</div>
+  <div id="groups"></div>
+
+  <div class="acts">
+    <button class="go" id="go">Done &rarr;</button>
+    <button id="back">&larr; Back</button>
+    <button class="undo" id="undo" hidden>unmark this step</button>
+    <p class="keys"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> step &middot;
+    <kbd>+</kbd> <kbd>&minus;</kbd> zoom &middot; <kbd>0</kbd> reset &middot;
+    <kbd>.</kbd> one clock edge</p>
+  </div>
+
+  <div class="inputs">
+    <div class="inhd">Clock and count</div>
+    <div class="cntrow">
+      <button id="cdn" aria-label="Count down one">&minus;</button>
+      <output id="cnt" aria-label="Current count">0</output>
+      <button id="cup" aria-label="One falling clock edge, count up one">+</button>
+      <span class="qb" id="qbits" aria-label="Counter outputs QD QC QB QA"></span>
+    </div>
+    <div class="rvrow">
+      <label for="rv">RV1</label>
+      <input type="range" id="rv" min="0" max="10" step="0.5" value="5"
+             aria-label="RV1 setting, 0 to 10 kilohms">
+      <output id="rvlab">5.0 k&Omega;</output>
+    </div>
+    <div class="lsum" id="lsum"></div>
+    <button class="runb" id="run" aria-pressed="false">&#9654; run at real speed</button>
+    <div class="segbox">
+      <svg id="seg7" viewBox="0 0 64 104" width="40" height="65" role="img"
+           aria-label="Seven-segment preview of the displayed digit">
+        <polygon class="sg" id="sg-a" points="14,12 20,6 44,6 50,12 44,18 20,18"/>
+        <polygon class="sg" id="sg-b" points="52,14 58,20 58,44 52,50 46,44 46,20"/>
+        <polygon class="sg" id="sg-c" points="52,54 58,60 58,84 52,90 46,84 46,60"/>
+        <polygon class="sg" id="sg-d" points="14,92 20,86 44,86 50,92 44,98 20,98"/>
+        <polygon class="sg" id="sg-e" points="12,54 18,60 18,84 12,90 6,84 6,60"/>
+        <polygon class="sg" id="sg-f" points="12,14 18,20 18,44 12,50 6,44 6,20"/>
+        <polygon class="sg" id="sg-g" points="14,52 20,46 44,46 50,58 44,58 20,58"/>
+      </svg>
+      <div>
+        <div class="lread" id="lread"></div>
+        <div class="tens"><i class="clk" id="cled"></i><span id="ctext">clock LED</span></div>
+      </div>
+    </div>
+    <table class="outs"><tbody id="outs"></tbody></table>
+    <p class="lnote" id="lnote"></p>
+  </div>
+</aside>
+
+<main class="main">
+
+<div class="card">
+  <span class="where" id="where"></span>
+  <h2 id="title"></h2>
+  <p id="detail"></p>
+  <div class="goal" id="goal" hidden><b>Why this step</b><span id="goalt"></span></div>
+  <table class="wires" id="wires" hidden><tbody id="wbody"></tbody></table>
+  <div class="dia" id="dia">
+  <div class="tabs">
+    <span class="zoom">
+      <button id="zout" aria-label="Zoom out" title="Zoom out">&minus;</button>
+      <span class="zlab" id="zlab">100%</span>
+      <button id="zin" aria-label="Zoom in" title="Zoom in">+</button>
+      <button id="zfit" class="wide" aria-label="Reset zoom" title="Reset zoom">reset</button>
+    </span>
+  </div>
+  <div class="panes" id="panes">
+  <div class="pane" id="ppin">
+    <p class="ptitle">Chips, left to right in signal order &mdash; click any pin to trace its net</p>
+    <div class="cmap" tabindex="0" aria-label="IC pin map for this step, scrollable">
+<!--CHIPS-->
+    </div>
+    <div class="trace" id="trace">
+      <span class="thint" id="thint">Bold names are this build's signals. Small grey names are
+      the chip's own pin names. The counter's QA&ndash;QD are this build's Q0&ndash;Q3.</span>
+    </div>
+    <div class="legend">
+      <span><i class="n"></i>this step</span>
+      <span><i class="d"></i>already wired</span>
+      <span><i class="u"></i>not yet</span>
+    </div>
+  </div>
+  <div class="pane" id="pbb">
+    <p class="ptitle">Breadboard &mdash; where it goes</p>
+    <div class="bbwrap" tabindex="0" aria-label="Breadboard diagram for this step, scrollable">
+<!--SVG-->
+    </div>
+    <div class="bbfoot">
+      <label><input type="checkbox" id="ball"> show every wire</label>
+      <span class="bbnote" id="bbnote"></span>
+    </div>
+    <p class="hint">Every lead lands in a free hole of the right strip, never in a pin's own
+    hole. Wires that cross a chip pass under it. Lit wires are this step, dimmed wires are
+    already placed, ghosts are still ahead of you.</p>
+  </div>
+  </div>
+  </div>
+  <div class="flag" id="flag" hidden><b id="flagk">Check</b><span id="flagt"></span></div>
+</div>
+
+
+</main>
+</div>
+
+<div class="ref">
+  <details open>
+    <summary>What each chip is actually doing</summary>
+    <div class="body">
+
+      <div class="why">
+        <h4>U1 NE555 &mdash; the clock</h4>
+        <p>Wired astable, the 555 charges C1 through R<sub>A</sub> + R<sub>B</sub> until the
+        capacitor reaches 2/3 of the supply, then discharges it through R<sub>B</sub> alone
+        until it falls to 1/3. Pin 3 is high while C1 charges and low while it discharges.
+        TRIG and THRES both watch the capacitor, which is why pins 2 and 6 are tied.</p>
+        <div class="eq">t<sub>high</sub> = 0.693 (R<sub>A</sub> + R<sub>B</sub>) C &nbsp;&nbsp;
+        t<sub>low</sub> = 0.693 R<sub>B</sub> C &nbsp;&nbsp;
+        f = 1.44 / ((R<sub>A</sub> + 2R<sub>B</sub>) C)</div>
+        <div class="tbl"><table class="t">
+          <thead><tr><th>RV1</th><th>R<sub>B</sub></th><th>Period</th><th>f</th><th>Duty</th></tr></thead>
+          <tbody>
+            <tr><td class="m">0 &Omega;</td><td class="m">60 k&Omega;</td><td class="m">0.90 s</td><td class="m">1.11 Hz</td><td class="m">54 %</td></tr>
+            <tr><td class="m">5 k&Omega;</td><td class="m">65 k&Omega;</td><td class="m">0.97 s</td><td class="m">1.03 Hz</td><td class="m">54 %</td></tr>
+            <tr><td class="m">10 k&Omega;</td><td class="m">70 k&Omega;</td><td class="m">1.04 s</td><td class="m">0.96 Hz</td><td class="m">53 %</td></tr>
+          </tbody>
+        </table></div>
+        <p><b>Why seven resistors.</b> The kit holds exactly one capacitor, 10 &micro;F. A 1 s
+        period then needs R<sub>A</sub> + 2R<sub>B</sub> near 144 k&Omega;, and the biggest kit
+        resistor is 10 k&Omega;. Six in series make R<sub>B</sub> = 60 k&Omega;; RV1 adds up to
+        10 k&Omega; of trim on top.</p>
+      </div>
+
+      <div class="why">
+        <h4>U2 74LS90 &mdash; the count</h4>
+        <p>The 74LS90 is two counters in one package: a divide-by-2 (CKA in, QA out) and a
+        divide-by-5 (CKB in, QB QC QD out). Both advance on the <b>falling</b> edge of their
+        clock. Clock the &divide;2 first and feed QA into CKB, and the four outputs count in
+        8421 BCD:</p>
+        <div class="tbl"><table class="t">
+          <thead><tr><th>Count</th><th>QD QC QB QA</th><th>Count</th><th>QD QC QB QA</th></tr></thead>
+          <tbody>
+            <tr><td class="m">0</td><td class="m">0 0 0 0</td><td class="m">5</td><td class="m">0 1 0 1</td></tr>
+            <tr><td class="m">1</td><td class="m">0 0 0 1</td><td class="m">6</td><td class="m">0 1 1 0</td></tr>
+            <tr><td class="m">2</td><td class="m">0 0 1 0</td><td class="m">7</td><td class="m">0 1 1 1</td></tr>
+            <tr><td class="m">3</td><td class="m">0 0 1 1</td><td class="m">8</td><td class="m">1 0 0 0</td></tr>
+            <tr><td class="m">4</td><td class="m">0 1 0 0</td><td class="m">9</td><td class="m">1 0 0 1</td></tr>
+          </tbody>
+        </table></div>
+        <p>Wire it the other way round (clock into CKB, QD into CKA) and the chip still counts to
+        ten, but in the bi-quinary 5421 code, which the CD4511 decodes into the wrong digits.</p>
+        <p>Its four reset inputs come in pairs: R0(1) and R0(2) both high clear the count to 0,
+        R9(1) and R9(2) both high force it to 9. All four are grounded so neither can fire.
+        A floating 74LS input reads as high, so leaving them open freezes the display.</p>
+      </div>
+
+      <div class="why warn">
+        <h4>The trap between U2 and U3</h4>
+        <p>U2 is 74LS (TTL). Its outputs only guarantee <b>2.7 V</b> when high. U3 is CMOS and
+        needs <b>3.5 V</b> to be sure it is reading a 1. Wired straight across, the counter
+        counts correctly and the display still shows wrong or blank digits.</p>
+        <p>The four 4.7 k&Omega; pull-ups on Q0&ndash;Q3 fix it: a 74LS output sources so little
+        current when high that the pull-up wins and lifts the line to nearly 5 V. When the output
+        goes low, the pull-up costs it only 1.06 mA of its 8 mA sink rating.</p>
+      </div>
+
+      <div class="why">
+        <h4>U3 CD4511 &mdash; the decoder</h4>
+        <p>Four BCD inputs in, seven segment drives out, with its own latch, blanking and lamp
+        test. All three are strapped inactive: /LT and /BL high, LE low. Its outputs source
+        current, which is why the display has to be common cathode.</p>
+        <p>It draws 6 and 9 without their tails, and it <b>blanks the display</b> for codes 10
+        to 15. The 74LS90 never produces those, so a blank digit in the sequence always means a
+        counter or pull-up fault, never a decoder fault.</p>
+      </div>
+
+      <div class="why warn">
+        <h4>The trap in the capacitor</h4>
+        <p>At the top of each charge C1 is being fed only (5 &minus; 3.33) / 70 k&Omega; =
+        24 &micro;A. An aluminum electrolytic leaks a few microamps, more when warm or after
+        sitting unused. 8 &micro;A of leakage stretches the period by about half; leakage near
+        24 &micro;A stops the clock completely with the display frozen on one digit.</p>
+        <p>If the clock will not start, suspect C1 before the 555. Leaving it powered for a few
+        minutes often reforms it. Failing that, shorten the chain by one or two resistors and
+        accept a faster count.</p>
+      </div>
+
+      <div class="why">
+        <h4>One line per chip</h4>
+        <div class="tbl"><table class="t">
+          <thead><tr><th>Chip</th><th>Takes in</th><th>Puts out</th><th>Meaning of the output</th></tr></thead>
+          <tbody>
+            <tr><td class="m">U1 NE555</td><td class="m">C1 voltage</td><td class="m">CLK</td><td>square wave, about 1 Hz</td></tr>
+            <tr><td class="m">U2 74LS90</td><td class="m">CLK</td><td class="m">Q3..Q0</td><td>count of falling edges, 0&ndash;9 in BCD</td></tr>
+            <tr><td class="m">U3 CD4511</td><td class="m">Q3..Q0</td><td class="m">a..g</td><td>segment drive for that digit</td></tr>
+            <tr><td class="m">DS1</td><td class="m">a..g</td><td class="m">light</td><td>the digit</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+    </div>
+  </details>
+
+  <details>
+    <summary>Signal flow diagram</summary>
+    <div class="body">
+      <p class="hint">Scroll sideways. Designators here are breadboard designators; WIRING.md
+      cross-references them to the PCB spec.</p>
+      <div class="frame flat" tabindex="0" aria-label="Signal flow diagram, scrollable">
+<!--FLOW-->
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Pinouts</summary>
+    <div class="body">
+      <h3>NE555 &mdash; U1</h3>
+      <div class="tbl"><table class="t">
+        <thead><tr><th>Pin</th><th>Name</th><th>Net</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td class="m">1</td><td class="m">GND</td><td class="m">GND</td><td>Ground</td></tr>
+          <tr><td class="m">2</td><td class="m">TRIG</td><td class="m">T_CAP</td><td>Starts a charge when C1 falls below 1/3 V<sub>CC</sub></td></tr>
+          <tr><td class="m">3</td><td class="m">OUT</td><td class="m">CLK</td><td>Clock out to U2 pin 14</td></tr>
+          <tr><td class="m">4</td><td class="m">RESET</td><td class="m">+5 V</td><td>Active low. Must be tied high.</td></tr>
+          <tr><td class="m">5</td><td class="m">CTRL</td><td class="m dim">open</td><td>No capacitor to spare for it</td></tr>
+          <tr><td class="m">6</td><td class="m">THRES</td><td class="m">T_CAP</td><td>Ends the charge at 2/3 V<sub>CC</sub></td></tr>
+          <tr><td class="m">7</td><td class="m">DISCH</td><td class="m">T_MID</td><td>Drains C1 through R<sub>B</sub></td></tr>
+          <tr><td class="m">8</td><td class="m">VCC</td><td class="m">+5 V</td><td>Supply</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>74LS90 &mdash; U2</h3>
+      <p><b>Power is pin 5 and ground is pin 10</b>, not 14 and 7 like every other 14-pin chip
+      in the kit.</p>
+      <div class="tbl"><table class="t">
+        <thead><tr><th>Pin</th><th>Name</th><th>Net</th><th>Pin</th><th>Name</th><th>Net</th></tr></thead>
+        <tbody>
+          <tr><td class="m">1</td><td class="m">CKB</td><td class="m">Q0</td><td class="m">14</td><td class="m">CKA</td><td class="m">CLK</td></tr>
+          <tr><td class="m">2</td><td class="m">R0(1)</td><td class="m">GND</td><td class="m">13</td><td class="m">NC</td><td class="m dim">&mdash;</td></tr>
+          <tr><td class="m">3</td><td class="m">R0(2)</td><td class="m">GND</td><td class="m">12</td><td class="m">QA</td><td class="m">Q0</td></tr>
+          <tr><td class="m">4</td><td class="m">NC</td><td class="m dim">&mdash;</td><td class="m">11</td><td class="m">QD</td><td class="m">Q3</td></tr>
+          <tr><td class="m">5</td><td class="m">VCC</td><td class="m">+5 V</td><td class="m">10</td><td class="m">GND</td><td class="m">GND</td></tr>
+          <tr><td class="m">6</td><td class="m">R9(1)</td><td class="m">GND</td><td class="m">9</td><td class="m">QB</td><td class="m">Q1</td></tr>
+          <tr><td class="m">7</td><td class="m">R9(2)</td><td class="m">GND</td><td class="m">8</td><td class="m">QC</td><td class="m">Q2</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>CD4511 &mdash; U3</h3>
+      <p>The data inputs are not in order on the package: A is pin 7, B pin 1, C pin 2, D pin 6.</p>
+      <div class="tbl"><table class="t">
+        <thead><tr><th>Pin</th><th>Name</th><th>Net</th><th>Pin</th><th>Name</th><th>Net</th></tr></thead>
+        <tbody>
+          <tr><td class="m">1</td><td class="m">B</td><td class="m">Q1</td><td class="m">16</td><td class="m">VDD</td><td class="m">+5 V</td></tr>
+          <tr><td class="m">2</td><td class="m">C</td><td class="m">Q2</td><td class="m">15</td><td class="m">f</td><td class="m">seg f</td></tr>
+          <tr><td class="m">3</td><td class="m">/LT</td><td class="m">+5 V</td><td class="m">14</td><td class="m">g</td><td class="m">seg g</td></tr>
+          <tr><td class="m">4</td><td class="m">/BL</td><td class="m">+5 V</td><td class="m">13</td><td class="m">a</td><td class="m">seg a</td></tr>
+          <tr><td class="m">5</td><td class="m">LE</td><td class="m">GND</td><td class="m">12</td><td class="m">b</td><td class="m">seg b</td></tr>
+          <tr><td class="m">6</td><td class="m">D</td><td class="m">Q3</td><td class="m">11</td><td class="m">c</td><td class="m">seg c</td></tr>
+          <tr><td class="m">7</td><td class="m">A</td><td class="m">Q0</td><td class="m">10</td><td class="m">d</td><td class="m">seg d</td></tr>
+          <tr><td class="m">8</td><td class="m">VSS</td><td class="m">GND</td><td class="m">9</td><td class="m">e</td><td class="m">seg e</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Display &mdash; DS1</h3>
+      <p>Common pin map for 0.39 in single-digit displays. The kit part ships without a
+      datasheet, so the lamp test at step 26 is what confirms it.</p>
+      <div class="tbl"><table class="t">
+        <thead><tr><th>Pin</th><th>Segment</th><th>Pin</th><th>Segment</th></tr></thead>
+        <tbody>
+          <tr><td class="m">1</td><td class="m">e</td><td class="m">10</td><td class="m">g</td></tr>
+          <tr><td class="m">2</td><td class="m">d</td><td class="m">9</td><td class="m">f</td></tr>
+          <tr><td class="m">3</td><td class="m">common cathode</td><td class="m">8</td><td class="m">common cathode</td></tr>
+          <tr><td class="m">4</td><td class="m">c</td><td class="m">7</td><td class="m">a</td></tr>
+          <tr><td class="m">5</td><td class="m">dp</td><td class="m">6</td><td class="m">b</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Parts list &mdash; all from the kit</summary>
+    <div class="body">
+      <div class="tbl"><table class="t">
+        <thead><tr><th>Used</th><th>Of</th><th>Part</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td class="m">1</td><td class="m">2</td><td class="m">NE555P</td><td>U1, clock</td></tr>
+          <tr><td class="m">1</td><td class="m">1</td><td class="m">SN74LS90</td><td>U2, counter. No spare in the kit.</td></tr>
+          <tr><td class="m">1</td><td class="m">1</td><td class="m">CD4511BE</td><td>U3, decoder. No spare in the kit.</td></tr>
+          <tr><td class="m">1</td><td class="m">2</td><td>7-segment, red, 0.39 in, common cathode</td><td>DS1</td></tr>
+          <tr><td class="m">7</td><td class="m">10</td><td class="m">10 k&Omega;</td><td>R1 (R<sub>A</sub>), R2&ndash;R7 (R<sub>B</sub> chain)</td></tr>
+          <tr><td class="m">1</td><td class="m">1</td><td class="m">10 k&Omega; pot</td><td>RV1, rate trim</td></tr>
+          <tr><td class="m">1</td><td class="m">1</td><td class="m">10 &micro;F</td><td>C1, timing</td></tr>
+          <tr><td class="m">4</td><td class="m">10</td><td class="m">4.7 k&Omega;</td><td>R8&ndash;R11, Q0&ndash;Q3 pull-ups</td></tr>
+          <tr><td class="m">8</td><td class="m">10</td><td class="m">330 &Omega;</td><td>R12&ndash;R18 segments, R19 clock LED</td></tr>
+          <tr><td class="m">1</td><td class="m">4</td><td>Green LED, 3 mm</td><td>LED1, clock indicator (optional)</td></tr>
+          <tr><td class="m">1</td><td class="m">1</td><td>830-point breadboard</td><td>the whole build</td></tr>
+          <tr><td class="m">1</td><td class="m">1</td><td>Breadboard power module</td><td>both sides set to 5 V</td></tr>
+          <tr><td class="m">1</td><td class="m">1</td><td>9 V snap to DC plug</td><td>feeds the module</td></tr>
+        </tbody>
+      </table></div>
+      <p>Not in the kit: the 9 V battery. There are no ceramic capacitors in the kit, so this
+      build has no decoupling; at a 1 Hz clock that is acceptable.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>If something is wrong</summary>
+    <div class="body">
+      <h3>Clock LED never lights, or stays solid</h3>
+      <p>Check U1 pin 4 is at +5 V and pins 2 and 6 are joined. Then measure the timing chain
+      unpowered: + rail to column 20 should read 70 to 80 k&Omega;. If all of that is right,
+      suspect C1's leakage before the 555 (see the capacitor trap above).</p>
+      <h3>Clock runs, display frozen on one digit</h3>
+      <p>The counter is not seeing the clock or is held in reset. Check the jumper into U2 pin 14,
+      and that U2 pins 2, 3, 6 and 7 are all grounded. A floating reset input reads high.</p>
+      <h3>Display counts 0 to 4 and repeats, or skips</h3>
+      <p>The QA to CKB jumper (U2 pin 12 to pin 1) is open.</p>
+      <h3>Digits out of order</h3>
+      <p>The clock went into CKB (pin 1) instead of CKA (pin 14).</p>
+      <h3>Some digits blank, or wrong digits on a correct count</h3>
+      <p>A missing or wrong-value pull-up on Q0&ndash;Q3, or a Q wire on the wrong CD4511 pin.
+      Remember A is pin 7 and D is pin 6.</p>
+      <h3>Display completely dark</h3>
+      <p>U3 pin 4 (/BL) must be at +5 V. Then run the lamp test. If the lamp test is dark too,
+      the commons (DS1 pins 3 and 8) are not grounded, or the display is common anode.</p>
+      <h3>A segment lights in the wrong place</h3>
+      <p>The display's pinout differs from the common map. Swap the two affected wires in step 24.</p>
+      <h3>Everything is dead</h3>
+      <p>Both module jumpers on 5 V, the module's pins lined up + to + on both sides, and a live
+      9 V battery.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Verification</summary>
+    <div class="body">
+      <div class="tbl"><table class="t">
+        <thead><tr><th>Check</th><th>How</th><th>Expect</th></tr></thead>
+        <tbody>
+          <tr><td>Supply not shorted</td><td>Unpowered, + rail to &minus; rail</td><td class="m">open</td></tr>
+          <tr><td>Timing chain intact</td><td>Unpowered, + rail to col 20, RV1 end to end</td><td class="m">70&ndash;80 k&Omega;, smooth</td></tr>
+          <tr><td>Supply current</td><td>Meter in series with the battery</td><td class="m">about 60&ndash;85 mA</td></tr>
+          <tr><td>Clock</td><td>LED1, or meter on U1 pin 3</td><td class="m">about 1 Hz</td></tr>
+          <tr><td>Rate trim</td><td>Turn RV1 end to end</td><td class="m">rate changes smoothly</td></tr>
+          <tr><td>Pull-ups work</td><td>Q0&ndash;Q3 when high</td><td class="m">&ge; 4.9 V</td></tr>
+          <tr><td>Sequence</td><td>Watch DS1</td><td class="m">0&ndash;9 repeating, no blanks</td></tr>
+          <tr><td>Ten counts</td><td>Stopwatch</td><td class="m">9.0&ndash;10.4 s</td></tr>
+        </tbody>
+      </table></div>
+      <p>The counter has no reset button (the kit has no momentary switch), so it can start on
+      any digit. Only the sequence matters.</p>
+    </div>
+  </details>
+</div>
+
+<footer>
+  <span id="saved">Progress saves in this browser.</span>
+  <button id="reset">Start over</button>
+</footer>
+</div>
+<script>
+var STEPS = [
+ {g:"Seat the parts", t:"Seat U1, the 555", w:"Columns 18 to 21",
+  d:"NE555, 8 pins, straddling the center channel. Notch faces left, pin 1 lower left at column 18, row E. Leave columns 1 to 6 empty: the power module sits over them."},
+ {g:"Seat the parts", t:"Seat U2, the 74LS90", w:"Columns 25 to 31",
+  d:"Notch faces left, pin 1 lower left at column 25. This is the only 74LS90 in the kit, so press it in gently and check no pin folded under.",
+  fk:"Watch", f:"Its power pins are 5 and 10, not 14 and 7 like every other 14-pin chip in the kit."},
+ {g:"Seat the parts", t:"Seat U3, the CD4511", w:"Columns 36 to 43",
+  d:"Notch faces left, pin 1 lower left at column 36. It is CMOS: touch something grounded before handling it."},
+ {g:"Seat the parts", t:"Seat the display", w:"Columns 58 to 62, rows D and H",
+  d:"Decimal point to the lower right. Its pin rows are 0.6 in apart, so on the breadboard the pins land in rows D and H, not E and F.",
+  fk:"Note", f:"The kit display ships without a datasheet. This build uses the common map (1 e, 2 d, 3 CC, 4 c, 5 dp, 6 b, 7 a, 8 CC, 9 f, 10 g). The lamp test at step 26 proves it."},
+
+ {g:"Power", t:"Plug in the power module", w:"Left end, over columns 1 to 5",
+  d:"Set both of the module's output jumpers to 5 V and press it into both rail pairs, + to the red line on each side. The 9 V snap plugs into its barrel jack.",
+  fk:"Check", f:"Switch on: the module's LED lights and each + rail reads 5 V to its own − rail. Never 3.3 V for this build: the 74LS90 needs at least 4.75 V. Switch off."},
+ {g:"Power", t:"Power the three chips", w:"6 jumpers",
+  d:"Each chip takes power from the rail on its own side. Red to a + rail, black to a − rail.",
+  W:[["U1 pin 8 (VCC), col 18 row J","top + rail"],["U1 pin 1 (GND), col 18 row A","bottom − rail"],
+     ["U2 pin 5 (VCC), col 29 row A","bottom + rail"],["U2 pin 10 (GND), col 29 row J","top − rail"],
+     ["U3 pin 16 (VDD), col 36 row J","top + rail"],["U3 pin 8 (VSS), col 43 row A","bottom − rail"]],
+  fk:"Watch", f:"U2's supply goes to the bottom + rail and its ground to the top − rail, the reverse of U1 and U3, because pin 5 is on its lower side."},
+ {g:"Power", t:"Power up and measure", w:"Meter on DC volts",
+  d:"No signal wiring yet. Just power.",
+  fk:"Check", f:"5 V across U1 pins 8 and 1, U2 pins 5 and 10, and U3 pins 16 and 8. Then switch off before wiring more."},
+
+ {g:"Tie-offs", t:"Hold the 555 out of reset", w:"1 jumper",
+  d:"RESET is active low. Pin 5 (CTRL) stays open: the kit's only capacitor is needed for timing.",
+  W:[["U1 pin 4 (RESET), col 21 row A","bottom + rail"]]},
+ {g:"Tie-offs", t:"Ground the counter's resets", w:"4 jumpers into the bottom − rail",
+  d:"All four reset inputs on U2 go to ground.",
+  y:"Goal: let it count. R0(1) and R0(2) high together clear the count to 0; R9(1) and R9(2) "
+    + "high together force it to 9. A floating 74LS input reads as high, so if these were left "
+    + "open the display would sit frozen on 9.",
+  W:[["U2 pin 2 R0(1), col 26 row A","GND"],["U2 pin 3 R0(2), col 27 row A","GND"],
+     ["U2 pin 6 R9(1), col 30 row A","GND"],["U2 pin 7 R9(2), col 31 row A","GND"]]},
+ {g:"Tie-offs", t:"Strap the CD4511", w:"Three control pins",
+  d:"Do not skip this one. CMOS inputs left floating wander.",
+  W:[["U3 pin 3 (/LT), col 38 row A","bottom + rail"],["U3 pin 4 (/BL), col 39 row A","bottom + rail"],
+     ["U3 pin 5 (LE), col 40 row A","bottom − rail"]],
+  fk:"Why", f:"LE floating can latch a stale digit, /BL floating can blank the display, /LT floating can light every segment. All three look like a broken counter."},
+
+ {g:"Clock", t:"Place R_A", w:"Column 19, top + rail to row J",
+  d:"One 10 kΩ (R1) from the top + rail into column 19, row J. Column 19's upper strip is U1 pin 7, DISCH. This node is T_MID.",
+  y:"Goal: give C1 a charging path. Current flows from +5 V through R_A, then through R_B, "
+    + "into C1. When the 555 discharges, pin 7 pulls T_MID to ground and C1 drains back "
+    + "through R_B only, which is why R_A sits on the far side of T_MID.",
+  W:[["top + rail","R1 10 kΩ"],["R1","col 19 row J (U1 pin 7, DISCH)"]]},
+ {g:"Clock", t:"Run the chain left", w:"4 × 10 kΩ, upper half",
+  d:"R2 to R5, each spanning three columns. Alternate rows H and I so two leads never share a hole.",
+  y:"Goal: build R_B from what the kit has. Its only capacitor is 10 µF, so a 1 s period "
+    + "needs about 140 kΩ of timing resistance, and the largest kit resistor is 10 kΩ. "
+    + "Six in series make R_B = 60 kΩ.",
+  W:[["R2: col 19 row H","col 16 row H"],["R3: col 16 row I","col 13 row I"],
+     ["R4: col 13 row H","col 10 row H"],["R5: col 10 row I","col 7 row I"]]},
+ {g:"Clock", t:"Turn the corner", w:"2 × 10 kΩ, column 7",
+  d:"R6 stands across the center channel in column 7. R7 runs back to the right along row C.",
+  W:[["R6: col 7 row G","col 7 row D"],["R7: col 7 row C","col 10 row C"]]},
+ {g:"Clock", t:"Seat RV1 and tie its wiper", w:"Row A, columns 10 to 12",
+  d:"Pot pins in row A, wiper (center pin) in column 11. One short jumper ties the wiper to column 10.",
+  W:[["RV1 pins","col 10, 11, 12 row A"],["wiper, col 11 row B","col 10 row B"]],
+  fk:"Why", f:"With the wiper tied to one end, a dirty wiper can only short out part of the pot. It can never open the timing path and stop the clock."},
+ {g:"Clock", t:"Close the timing loop", w:"2 jumpers",
+  d:"RV1's free end goes to TRIG. TRIG is then joined to THRES around the left end of U1.",
+  y:"Goal: let the 555 watch the capacitor. TRIG (pin 2) restarts the charge when the capacitor "
+    + "falls to 1/3 of the supply; THRES (pin 6) ends it at 2/3. Both pins sit on the same node, "
+    + "T_CAP, and that is what makes the circuit oscillate on its own.",
+  W:[["RV1 end, col 12 row C","col 19 row C (U1 pin 2, TRIG)"],
+     ["U1 pin 2, col 19 row D","col 20 row G (U1 pin 6, THRES)"]],
+  fk:"Check", f:"Unpowered, meter from the top + rail to column 20: 70 to 80 kΩ, changing smoothly as you turn RV1. About 10 kΩ or open means a break in the chain."},
+ {g:"Clock", t:"Seat the timing capacitor", w:"Column 20, row J to the top − rail",
+  d:"C1, 10 µF. Positive lead in column 20 row J (THRES strip), negative lead in the top − rail.",
+  y:"Goal: set the time base. With 70 kΩ to fill it through, the 10 µF capacitor takes about "
+    + "half a second each way, so one full clock cycle lands near one second.",
+  W:[["C1 + (long lead)","col 20 row J"],["C1 − (stripe side)","top − rail"]],
+  fk:"Watch", f:"Electrolytic. The stripe marks the negative lead, and it goes to the rail. Backwards, it leaks heavily and the clock will not start."},
+ {g:"Clock", t:"Clock indicator LED", w:"Columns 20 to 23, lower half",
+  d:"Optional, and not in the Rev B spec. One spare 330 Ω and a green LED from the kit put the clock on show for the demo video.",
+  W:[["R19 330 Ω: col 20 row B (U1 pin 3, OUT)","col 23 row B"],
+     ["LED1 anode (long lead), col 23 row A","bottom − rail"]],
+  fk:"Check", f:"Power up. LED1 blinks about once a second, and turning RV1 changes the rate. If it never lights or stays solid, read the capacitor trap in the first drawer before suspecting the 555."},
+
+ {g:"Counter", t:"Clock into the counter", w:"1 jumper",
+  d:"U1's output into U2's divide-by-2 input.",
+  y:"Goal: feed CKA, not CKB. CKA is the divide-by-2 stage. The 74LS90 advances on the falling "
+    + "edge, so the digit will change at the moment LED1 goes out.",
+  W:[["U1 pin 3 (OUT), col 20 row C","U2 pin 14 (CKA), col 25 row J"]]},
+ {g:"Counter", t:"QA back into CKB", w:"1 jumper",
+  d:"U2's divide-by-2 output into its own divide-by-5 input.",
+  y:"Goal: chain ÷2 into ÷5 in that order. QA toggles every clock; each time it falls, "
+    + "the ÷5 stage steps once. Read QD QC QB QA together and the four lines count "
+    + "0000 to 1001 in 8421 BCD, then wrap to 0000.",
+  W:[["U2 pin 12 (QA), col 27 row I","U2 pin 1 (CKB), col 25 row D"]]},
+
+ {g:"Decoder", t:"Run the Q bus to the decoder", w:"4 wires, under both chips",
+  d:"Q0 to Q3 from U2's top side to U3's bottom side.",
+  W:[["U2 pin 12 (QA = Q0), col 27 row G","U3 pin 7 (A), col 42 row D"],
+     ["U2 pin 9 (QB = Q1), col 30 row G","U3 pin 1 (B), col 36 row D"],
+     ["U2 pin 8 (QC = Q2), col 31 row G","U3 pin 2 (C), col 37 row D"],
+     ["U2 pin 11 (QD = Q3), col 28 row G","U3 pin 6 (D), col 41 row D"]],
+  fk:"Watch", f:"The CD4511's inputs are not in order on the package: A is pin 7, B pin 1, C pin 2, D pin 6."},
+ {g:"Decoder", t:"Pull the Q lines up", w:"4 × 4.7 kΩ to the bottom + rail",
+  d:"One 4.7 kΩ from each U3 input strip, row A, into the bottom + rail.",
+  y:"Goal: make TTL highs read as CMOS highs. A 74LS output only guarantees 2.7 V when high, and "
+    + "the CD4511 needs 3.5 V. Each pull-up lifts its line to nearly 5 V and costs the counter "
+    + "about 1 mA when the line is low.",
+  W:[["col 42 row A (Q0)","bottom + rail"],["col 36 row A (Q1)","bottom + rail"],
+     ["col 37 row A (Q2)","bottom + rail"],["col 41 row A (Q3)","bottom + rail"]],
+  fk:"Why", f:"Leave these out and the counter still counts, but the display shows wrong or blank digits. This is the most likely fault on the whole board."},
+
+ {g:"Display", t:"Place the segment resistors", w:"Columns 47 to 53, rows G to D",
+  d:"Seven 330 Ω standing across the channel, one per column. Left to right they serve segments e, d, c, b, a, g, f.",
+  y:"Goal: hold each segment near 7.6 mA. The order looks scrambled on purpose: it is the CD4511's "
+    + "output order reversed, so the seven feed wires in the next step nest without crossing.",
+  W:[["R16 (e): col 47 row G","col 47 row D"],["R15 (d): col 48 row G","col 48 row D"],
+     ["R14 (c): col 49 row G","col 49 row D"],["R13 (b): col 50 row G","col 50 row D"],
+     ["R12 (a): col 51 row G","col 51 row D"],["R18 (g): col 52 row G","col 52 row D"],
+     ["R17 (f): col 53 row G","col 53 row D"]]},
+ {g:"Display", t:"Decoder into the resistors", w:"7 jumpers, all row J",
+  d:"Each CD4511 output to the top of its resistor. Innermost first: e, then d, and so on out to f.",
+  W:[["U3 pin 9 (e), col 43","col 47"],["U3 pin 10 (d), col 42","col 48"],
+     ["U3 pin 11 (c), col 41","col 49"],["U3 pin 12 (b), col 40","col 50"],
+     ["U3 pin 13 (a), col 39","col 51"],["U3 pin 14 (g), col 38","col 52"],
+     ["U3 pin 15 (f), col 37","col 53"]]},
+ {g:"Display", t:"Resistors into the display", w:"7 jumpers from row A",
+  d:"c, d and e land below the display in row A. a, b, f and g each rise in a gap between display columns, pass under the display, and land above it in row J.",
+  W:[["col 47 (e)","DS1 pin 1, col 58 row A"],["col 48 (d)","DS1 pin 2, col 59 row A"],
+     ["col 49 (c)","DS1 pin 4, col 61 row A"],["col 50 (b)","DS1 pin 6, col 62 row J"],
+     ["col 51 (a)","DS1 pin 7, col 61 row J"],["col 52 (g)","DS1 pin 10, col 58 row J"],
+     ["col 53 (f)","DS1 pin 9, col 59 row J"]]},
+ {g:"Display", t:"Ground the display commons", w:"2 jumpers",
+  d:"Both common-cathode pins go to ground, one on each side.",
+  W:[["DS1 pin 3, col 60 row A","bottom − rail"],["DS1 pin 8, col 60 row J","top − rail"]]},
+ {g:"Display", t:"Lamp test", w:"Move one jumper for a moment",
+  d:"Power up. Move the jumper on U3 pin 3 (column 38) from the + rail to the − rail, look, and put it back.",
+  fk:"Check", f:"All seven segments light, which proves every resistor and display wire. A dark segment points to its own resistor or jumper. A segment lighting in the wrong place means the display's pinout differs: swap those two wires in step 24."},
+
+ {g:"Verify", t:"Watch it count", w:"Power on, stopwatch ready",
+  d:"The display runs 0 through 9 and repeats, about one digit a second. It can start on any digit: the kit has no momentary switch for a reset button.",
+  fk:"Check", f:"Ten counts take 9.0 to 10.4 s across RV1's range. The sequence is the real test: a blank digit means a pull-up fault, 0 to 4 repeating means the QA to CKB jumper is open, digits out of order mean the clock went into CKB."}
+];
+
+// Pins each step touches, in step order. "REF.*" means the whole package.
+var PINS = [
+ ["U1.*"], ["U2.*"], ["U3.*"], ["DS1.*"],
+ [],
+ ["U1.8","U1.1","U2.5","U2.10","U3.16","U3.8"],
+ ["U1.8","U1.1","U2.5","U2.10","U3.16","U3.8"],
+ ["U1.4"],
+ ["U2.2","U2.3","U2.6","U2.7"],
+ ["U3.3","U3.4","U3.5"],
+ ["U1.7"],
+ ["U1.7"],
+ [],
+ [],
+ ["U1.2","U1.6"],
+ ["U1.6"],
+ ["U1.3"],
+ ["U1.3","U2.14"],
+ ["U2.12","U2.1"],
+ ["U2.12","U2.9","U2.8","U2.11","U3.7","U3.1","U3.2","U3.6"],
+ ["U3.7","U3.1","U3.2","U3.6"],
+ [],
+ ["U3.9","U3.10","U3.11","U3.12","U3.13","U3.14","U3.15"],
+ ["DS1.1","DS1.2","DS1.4","DS1.6","DS1.7","DS1.10","DS1.9"],
+ ["DS1.3","DS1.8"],
+ ["U3.3"],
+ ["U1.3","U2.12","U2.9","U2.8","U2.11"]
+];
+
+var PKGPINS = {U1:8, U2:14, U3:16, DS1:10};
+
+// Step indices at which each stage is really there. Before that the readouts show the
+// same numbers as a TARGET: what you are working towards.
+var LIVE = {pot:13, clock:15, cled:16, count:18, decode:20, show:24};
+
+var OUTS = [
+ ["U1 NE555 — clock", null, null],
+ ["R_B = 60k + RV1", LIVE.pot, function(st){ return (st.rb / 1000).toFixed(1) + " kΩ"; }],
+ ["period", LIVE.clock, function(st){ return st.T.toFixed(2) + " s  (" + st.f.toFixed(2) + " Hz)"; }],
+ ["high / low", LIVE.clock, function(st){ return st.th.toFixed(2) + " / " + st.tl.toFixed(2) + " s"; }],
+ ["U2 74LS90 — count", null, null],
+ ["QA  (÷2)", LIVE.count, function(st){ return String(st.q0); }],
+ ["QD QC QB  (÷5)", LIVE.count, function(st){ return st.q3 + " " + st.q2 + " " + st.q1 + "  (" + (st.n >> 1) + ")"; }],
+ ["Q3..Q0", LIVE.count, function(st){ return st.qb + "  (" + st.n + ")"; }],
+ ["U3 CD4511 — decode", null, null],
+ ["a b c d e f g", LIVE.decode, function(st){ return st.seg.split("").join(" "); }]
+];
+
+var CHIPOUT = [
+ ["U1",  LIVE.clock,  function(st){ return ["f = " + st.f.toFixed(2) + " Hz",
+                                            "T = " + st.T.toFixed(2) + " s"]; }],
+ ["U2",  LIVE.count,  function(st){ return ["Q3..Q0 = " + st.qb,
+                                            "count " + st.n]; }],
+ ["U3",  LIVE.decode, function(st){ return ["abcdefg", st.seg]; }],
+ ["DS1", LIVE.show,   function(st){ return ["shows " + st.n,
+                                            st.n === 9 ? "next edge wraps to 0" : "next " + ((st.n + 1) % 10)]; }]
+];
+
+// CD4511 segment patterns, a..g. Note 6 and 9 are drawn without their tails.
+var SEG7 = ["1111110","0110000","1101101","1111001","0110011",
+            "1011011","0011111","1110000","1111111","1110011"];
+
+function bin4(v){
+  return ((v >> 3) & 1) + "" + ((v >> 2) & 1) + ((v >> 1) & 1) + (v & 1);
+}
+
+// The 555 astable, R_A = 10k, R_B = 60k + RV1, C = 10 uF.
+function solve(n, rvk){
+  var RA = 10e3, RB = 60e3 + rvk * 1e3, C = 10e-6;
+  var th = 0.693 * (RA + RB) * C, tl = 0.693 * RB * C, T = th + tl;
+  var o = {n:n, rb:RB, th:th, tl:tl, T:T, f:1 / T, duty:th / T,
+           q0:n & 1, q1:(n >> 1) & 1, q2:(n >> 2) & 1, q3:(n >> 3) & 1};
+  var pat = SEG7[n] || "0000000";
+  ["sa","sb","sc","sd","se","sf","sg"].forEach(function(k, i){ o[k] = +pat[i]; });
+  o.seg = pat; o.qb = bin4(n);
+  return o;
+}
+
+
+function expand(list){
+  var o = [];
+  (list || []).forEach(function(k){
+    var parts = k.split('.');
+    if (parts[1] === '*') {
+      var n = PKGPINS[parts[0]] || 0;
+      for (var i = 1; i <= n; i++) o.push(parts[0] + '.' + i);
+    } else { o.push(k); }
+  });
+  return o;
+}
+
+(function(){
+  var KEY = "hop3.progress.v1";
+  var cur = 0, done = {}, zi = 2, pzi = 2;
+  var PZOOM = [0.75, 0.9, 1, 1.15, 1.35, 1.6, 2];
+  var ZOOM = [0.6, 0.8, 1, 1.3, 1.7, 2.2, 3];
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) { var o = JSON.parse(raw); cur = o.cur || 0; done = o.done || {}; if (typeof o.zi === "number") zi = o.zi;
+      if (typeof o.pzi === "number") pzi = o.pzi; }
+  } catch (err) {}
+  if (!(cur >= 0 && cur < STEPS.length)) cur = 0;
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify({cur: cur, done: done, zi: zi, pzi: pzi})); } catch (err) {}
+  }
+
+  var el = {};
+  ['count','phase','pct','fill','where','title','detail','wires','wbody','flag','flagk','flagt',
+   'go','back','groups','reset','ppin','pbb','ball','bbnote','goal','goalt','trace',
+   'zin','zout','zfit','zlab','undo','dia',
+   'pzin','pzout','pzfit','pzlab','panes','rcount','rtitle','rwhere',
+   'cnt','cdn','cup','qbits','rv','rvlab','run','lsum','lread','cled','ctext','lnote','outs'].forEach(function(k){ el[k] = document.getElementById(k); });
+
+  // pin map elements, keyed "U1.5" and "U1"
+  var bbMapEl = document.getElementById('cm');
+  var pinEls = {}, bodyEls = {};
+  Array.prototype.forEach.call(document.querySelectorAll('#cm .pin'), function(g){
+    pinEls[g.id.slice(2).replace(/-(\d+)$/, '.$1')] = g;
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#cm .cbody'), function(r){
+    bodyEls[r.id.slice(2)] = r;
+  });
+  var bbParts = {};
+  Array.prototype.forEach.call(document.querySelectorAll('#bb .part'), function(g){
+    bbParts[g.id.slice(3)] = g;
+  });
+
+  // ---- trace a net: click a pin, light every pin and wire on the same net ----
+  var selNet = null;
+  var netPins = {};
+  Array.prototype.forEach.call(document.querySelectorAll('#cm .pin[data-net]'), function(g){
+    var n = g.getAttribute('data-net');
+    (netPins[n] = netPins[n] || []).push(g.id.slice(2).replace(/-(\d+)$/, ' pin $1'));
+    g.addEventListener('click', function(ev){
+      ev.stopPropagation();
+      setTrace(selNet === n ? null : n);
+    });
+  });
+
+  var HINT = "Bold names are this build&#39;s signals. Small grey names are the chip&#39;s own "
+    + "pin names. The counter&#39;s QA&ndash;QD are this build&#39;s Q0&ndash;Q3.";
+  function setTrace(n){
+    selNet = n;
+    if (bbMapEl) bbMapEl.classList.toggle('tracing', !!n);
+    if (bb) bb.classList.toggle('tracing', !!n);
+    Array.prototype.forEach.call(document.querySelectorAll('#cm .pin'), function(g){
+      g.classList.toggle('sel', !!n && g.getAttribute('data-net') === n);
+    });
+    if (bb) {
+      Array.prototype.forEach.call(bb.querySelectorAll('.sw'), function(w){
+        w.classList.toggle('sel', !!n && w.getAttribute('data-net') === n);
+      });
+    }
+    el.trace.textContent = '';
+    if (!n) {
+      var hint = document.createElement('span');
+      hint.innerHTML = HINT;
+      el.trace.appendChild(hint);
+      return;
+    }
+    var nm = document.createElement('b'); nm.textContent = n;
+    var pins = document.createElement('span');
+    pins.className = 'pins';
+    pins.textContent = (netPins[n] || []).join(', ');
+    var wires = bb ? bb.querySelectorAll('.sw[data-net="' + n + '"]:not(.wd)').length : 0;
+    var cnt = document.createElement('span');
+    cnt.textContent = wires ? wires + ' on the board' : 'rail net';
+    var clr = document.createElement('button');
+    clr.type = 'button'; clr.textContent = 'clear';
+    clr.addEventListener('click', function(){ setTrace(null); });
+    el.trace.appendChild(nm); el.trace.appendChild(pins);
+    el.trace.appendChild(cnt); el.trace.appendChild(clr);
+  }
+  if (bbMapEl) {
+    bbMapEl.addEventListener('click', function(ev){
+      if (!ev.target.closest || !ev.target.closest('.pin[data-net]')) setTrace(null);
+    });
+  }
+
+  function paintMap(){
+    var now = {}, wired = {}, seat = {};
+    (PINS[cur] || []).forEach(function(k){
+      if (k.split('.')[1] === '*') seat[k.split('.')[0]] = 1;
+    });
+    expand(PINS[cur]).forEach(function(k){ now[k] = 1; });
+    for (var i = 0; i < STEPS.length; i++) {
+      if (done[i]) expand(PINS[i]).forEach(function(k){ wired[k] = 1; });
+    }
+    Object.keys(pinEls).forEach(function(k){
+      var g = pinEls[k];
+      g.classList.toggle('now', !!now[k]);
+      g.classList.toggle('wired', !now[k] && !!wired[k]);
+    });
+    Object.keys(bodyEls).forEach(function(r){
+      bodyEls[r].classList.toggle('seat', !!seat[r]);
+    });
+    Object.keys(bbParts).forEach(function(r){
+      bbParts[r].classList.toggle('seat', !!seat[r]);
+    });
+    if (selNet) {
+      Object.keys(pinEls).forEach(function(k){
+        pinEls[k].classList.toggle('sel', pinEls[k].getAttribute('data-net') === selNet);
+      });
+    }
+  }
+
+  // breadboard, scoped to the current step
+  var bb = document.getElementById('bb');
+
+  // every drawn element, bucketed by the step that places it
+  var bbSteps = {};
+  if (bb) {
+    Array.prototype.forEach.call(bb.querySelectorAll('.sw'), function(n){
+      var k = n.getAttribute('data-s');
+      (bbSteps[k] = bbSteps[k] || []).push(n);
+    });
+  }
+
+  function paintBB(){
+    if (!bb) return;
+    var all = el.ball && el.ball.checked;
+    bb.classList.toggle('step', !all);
+    Object.keys(bbSteps).forEach(function(k){
+      var i = +k, now = i === cur, wired = !now && !!done[i];
+      bbSteps[k].forEach(function(n){
+        n.classList.toggle('wnow', now);
+        n.classList.toggle('wdone', wired);
+        if (selNet) n.classList.toggle('sel', n.getAttribute('data-net') === selNet);
+      });
+    });
+    if (el.bbnote) {
+      var mine = bbSteps[cur] || [];
+      el.bbnote.textContent = all ? 'Every wire shown.'
+        : mine.length ? 'Lit: the ' + (STEPS[cur].W ? STEPS[cur].W.length + ' connections'
+                                                    : 'parts') + ' for this step.'
+        : 'This step places no wires.';
+    }
+  }
+
+  if (el.ball) el.ball.addEventListener('change', paintBB);
+
+  // Zoom, shared by both diagrams. 100% means "fits the width of its pane".
+  function applyZoom(){
+    var z = ZOOM[zi];
+    [[bbMapEl, document.querySelector('.cmap')],
+     [bb, document.querySelector('.bbwrap')]].forEach(function(pair){
+      var svg = pair[0], box = pair[1];
+      if (!svg || !box) return;
+      var cs = getComputedStyle(box);
+      var base = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      if (!(base > 0)) return;
+      svg.style.width = Math.round(Math.max(base, 300) * z) + 'px';
+      svg.style.minWidth = '0';
+      svg.style.maxWidth = 'none';
+    });
+    el.zlab.textContent = Math.round(z * 100) + '%';
+    el.zout.disabled = zi === 0;
+    el.zin.disabled = zi === ZOOM.length - 1;
+    save();
+  }
+  var rzT;
+  window.addEventListener('resize', function(){
+    clearTimeout(rzT);
+    rzT = setTimeout(applyZoom, 120);
+  });
+  function zoomBy(d){
+    var n = Math.min(ZOOM.length - 1, Math.max(0, zi + d));
+    if (n !== zi) { zi = n; applyZoom(); }
+  }
+  el.zin.addEventListener('click', function(){ zoomBy(1); });
+  el.zout.addEventListener('click', function(){ zoomBy(-1); });
+  el.zfit.addEventListener('click', function(){ zi = 2; applyZoom(); });
+
+  // whole-page zoom
+  function applyPageZoom(){
+    var z = PZOOM[pzi];
+    document.documentElement.style.zoom = z === 1 ? '' : z;
+    el.pzlab.textContent = Math.round(z * 100) + '%';
+    el.pzout.disabled = pzi === 0;
+    el.pzin.disabled = pzi === PZOOM.length - 1;
+    save();
+  }
+  function pageZoomBy(d){
+    var n = Math.min(PZOOM.length - 1, Math.max(0, pzi + d));
+    if (n !== pzi) { pzi = n; applyPageZoom(); }
+  }
+  el.pzin.addEventListener('click', function(){ pageZoomBy(1); });
+  el.pzout.addEventListener('click', function(){ pageZoomBy(-1); });
+  el.pzfit.addEventListener('click', function(){ pzi = 2; applyPageZoom(); });
+
+
+  document.addEventListener('keydown', function(ev){
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var t = ev.target, tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (t && t.isContentEditable) return;
+    if (ev.key === 'ArrowRight') { step(1); ev.preventDefault(); }
+    else if (ev.key === 'ArrowLeft') { step(-1); ev.preventDefault(); }
+    else if (ev.key === '+' || ev.key === '=') { zoomBy(1); ev.preventDefault(); }
+    else if (ev.key === '-' || ev.key === '_') { zoomBy(-1); ev.preventDefault(); }
+    else if (ev.key === '0') { zi = 2; applyZoom(); ev.preventDefault(); }
+    else if (ev.key === '.') { edge(); ev.preventDefault(); }
+    else if (ev.key === 'Escape' && selNet) { setTrace(null); ev.preventDefault(); }
+  });
+  function step(d){
+    var n = Math.min(STEPS.length - 1, Math.max(0, cur + d));
+    if (n !== cur) { cur = n; save(); render(); }
+  }
+
+  // ---- clock and count: the rail simulates the finished circuit ----
+  var segEls = {};
+  ['a','b','c','d','e','f','g'].forEach(function(k){
+    segEls[k] = document.getElementById('sg-' + k);
+  });
+  var roEls = {};
+  CHIPOUT.forEach(function(c){
+    roEls[c[0]] = {box: document.getElementById('ro-' + c[0]),
+                   tag: document.getElementById('rotag-' + c[0]),
+                   l1:  document.getElementById('rol1-' + c[0]),
+                   l2:  document.getElementById('rol2-' + c[0])};
+  });
+
+  var sim = {n: 0, rv: 5, high: false, running: false, timer: null};
+  var qEls = [];
+  ['QD','QC','QB','QA'].forEach(function(nm){
+    var s = document.createElement('span');
+    s.textContent = nm;
+    el.qbits.appendChild(s);
+    qEls.push(s);
+  });
+
+  // One falling edge on CKA: the 74LS90 steps once.
+  function edge(){
+    sim.n = (sim.n + 1) % 10;
+    paintLogic();
+  }
+  el.cup.addEventListener('click', edge);
+  el.cdn.addEventListener('click', function(){ sim.n = (sim.n + 9) % 10; paintLogic(); });
+  el.rv.addEventListener('input', function(){
+    var v = parseFloat(el.rv.value);
+    sim.rv = isNaN(v) ? sim.rv : v;
+    paintLogic();
+  });
+
+  // Real-speed run: high for t_high, low for t_low, count on the falling edge.
+  function tick(){
+    var st = solve(sim.n, sim.rv);
+    if (sim.high) { sim.high = false; edge(); sim.timer = setTimeout(tick, st.tl * 1000); }
+    else { sim.high = true; paintLogic(); sim.timer = setTimeout(tick, st.th * 1000); }
+  }
+  function setRun(on){
+    sim.running = on;
+    clearTimeout(sim.timer);
+    sim.high = false;
+    el.run.setAttribute('aria-pressed', on ? 'true' : 'false');
+    el.run.innerHTML = on ? '&#10074;&#10074; stop' : '&#9654; run at real speed';
+    if (on) tick(); else paintLogic();
+  }
+  el.run.addEventListener('click', function(){ setRun(!sim.running); });
+
+  function paintLogic(){
+    var st = solve(sim.n, sim.rv);
+    el.cnt.textContent = sim.n;
+    el.rvlab.textContent = sim.rv.toFixed(1) + ' kΩ';
+    el.lsum.textContent = st.f.toFixed(2) + ' Hz  ·  ' + st.T.toFixed(2) + ' s per count';
+    var bits = [st.q3, st.q2, st.q1, st.q0];
+    qEls.forEach(function(s, i){ s.classList.toggle('on', !!bits[i]); });
+
+    CHIPOUT.forEach(function(c){
+      var r = roEls[c[0]], live = cur >= c[1], lines = c[2](st);
+      if (!r.box) return;
+      r.box.classList.toggle('live', live);
+      r.box.classList.toggle('tgt', !live);
+      r.tag.textContent = live ? 'NOW' : 'TARGET → step ' + (c[1] + 1);
+      r.l1.textContent = lines[0];
+      r.l2.textContent = lines[1];
+    });
+
+    el.outs.textContent = '';
+    OUTS.forEach(function(row){
+      var tr = document.createElement('tr');
+      if (row[1] === null) {
+        tr.className = 'hd';
+        var td = document.createElement('td');
+        td.colSpan = 2; td.textContent = row[0];
+        tr.appendChild(td);
+      } else {
+        var live = cur >= row[1];
+        if (!live) tr.className = 'pend';
+        var k = document.createElement('td'); k.className = 'k'; k.textContent = row[0];
+        var v = document.createElement('td'); v.className = 'v'; v.textContent = row[2](st);
+        tr.appendChild(k); tr.appendChild(v);
+      }
+      el.outs.appendChild(tr);
+    });
+
+    var shown = cur >= LIVE.show;
+    ['a','b','c','d','e','f','g'].forEach(function(k){
+      segEls[k].classList.toggle('on', shown && !!st['s' + k]);
+    });
+    el.lread.textContent = shown ? 'shows ' + st.n : 'lights at step ' + (LIVE.show + 1);
+    var ledIn = cur >= LIVE.cled;
+    el.cled.classList.toggle('on', ledIn && sim.running && sim.high);
+    el.ctext.textContent = !ledIn ? 'clock LED — step ' + (LIVE.cled + 1)
+      : sim.running ? (sim.high ? 'CLK high' : 'CLK low') : 'clock LED';
+
+    var note = '';
+    if (st.n === 6 || st.n === 9) {
+      note = 'The CD4511 draws ' + st.n + ' without its tail, so '
+           + (st.n === 6 ? 'segment a stays dark' : 'segment d stays dark')
+           + '. Correct, not a dead segment.';
+    } else if (st.n === 7) {
+      note = 'Next edge: QA falls, the ÷5 stage steps from 3 to 4, and Q3..Q0 jumps from 0111 to 1000.';
+    } else if (st.n === 8) {
+      note = 'At 9 the next edge wraps every output to 0 at once. A single digit has no carry out to drive.';
+    } else if (sim.rv === 0 || sim.rv === 10) {
+      note = 'RV1 at its ' + (sim.rv === 0 ? 'fast' : 'slow') + ' end: ten counts take '
+           + (st.T * 10).toFixed(1) + ' s.';
+    } else {
+      note = 'The 74LS90 steps on the falling edge of CLK, so the digit changes as the clock LED goes out.';
+    }
+    el.lnote.textContent = note;
+  }
+
+  // Nudge the rail so the active step stays visible. This scrolls the rail only.
+  var railEl = document.querySelector('.rail');
+  function keepPillVisible(){
+    var pill = pills[cur];
+    if (!pill || !railEl) return;
+    if (railEl.scrollHeight <= railEl.clientHeight + 1) return;
+    var pr = pill.getBoundingClientRect(), rr = railEl.getBoundingClientRect();
+    if (pr.top < rr.top) railEl.scrollTop -= (rr.top - pr.top) + 10;
+    else if (pr.bottom > rr.bottom) railEl.scrollTop += (pr.bottom - rr.bottom) + 10;
+  }
+
+  // step map
+  var pills = [];
+  (function(){
+    var last = null, box = null;
+    STEPS.forEach(function(s, i){
+      if (s.g !== last) {
+        last = s.g;
+        var g = document.createElement('div'); g.className = 'grp';
+        var n = document.createElement('div'); n.className = 'grpn'; n.textContent = s.g;
+        box = document.createElement('div'); box.className = 'pills';
+        g.appendChild(n); g.appendChild(box); el.groups.appendChild(g);
+      }
+      var b = document.createElement('button');
+      b.className = 'pill'; b.textContent = String(i + 1);
+      b.setAttribute('aria-label', 'Step ' + (i + 1) + ', ' + s.t);
+      b.addEventListener('click', function(){ cur = i; save(); render(); });
+      box.appendChild(b); pills.push(b);
+    });
+  })();
+
+  function render(){
+    var s = STEPS[cur], n = STEPS.length;
+    var nd = 0; for (var k in done) { if (done[k]) nd++; }
+    el.count.textContent = 'Step ' + (cur + 1) + ' of ' + n;
+    el.phase.textContent = s.g;
+    el.pct.textContent = Math.round(nd / n * 100) + '% done';
+    el.fill.style.width = (nd / n * 100) + '%';
+    el.where.textContent = s.w;
+    el.title.textContent = s.t;
+    el.rcount.textContent = 'Step ' + (cur + 1) + ' of ' + n;
+    el.rtitle.textContent = s.t;
+    el.rwhere.textContent = s.w;
+    el.detail.textContent = s.d;
+    el.detail.hidden = !s.d;
+    el.goalt.textContent = s.y || '';
+    el.goal.hidden = !s.y;
+
+    el.wbody.textContent = '';
+    if (s.W) {
+      s.W.forEach(function(w, i){
+        var tr = document.createElement('tr');
+        var a = document.createElement('td'); a.className = 'a'; a.textContent = w[0];
+        var m = document.createElement('td'); m.className = 'arr'; m.textContent = '→';
+        var b = document.createElement('td'); b.textContent = w[1];
+        var c = document.createElement('td'); c.className = 'n'; c.textContent = i + 1;
+        tr.appendChild(a); tr.appendChild(m); tr.appendChild(b); tr.appendChild(c);
+        el.wbody.appendChild(tr);
+      });
+    }
+    el.wires.hidden = !s.W;
+
+    if (s.f) { el.flagk.textContent = s.fk || 'Check'; el.flagt.textContent = s.f; el.flag.hidden = false; }
+    else { el.flag.hidden = true; }
+
+    var isDone = !!done[cur];
+    el.go.textContent = isDone ? 'Already done — next →' : 'Done →';
+    el.go.classList.toggle('redo', isDone);
+    el.back.disabled = cur === 0;
+    el.undo.hidden = !isDone;
+
+    pills.forEach(function(p, i){
+      p.setAttribute('data-s', done[i] ? 'done' : (i === cur ? 'now' : ''));
+    });
+    keepPillVisible();
+
+    paintMap();
+    paintBB();
+    paintLogic();
+  }
+
+  el.go.addEventListener('click', function(){
+    done[cur] = true;
+    if (cur < STEPS.length - 1) cur++;
+    save(); render();
+  });
+  el.back.addEventListener('click', function(){ step(-1); });
+  el.undo.addEventListener('click', function(){
+    delete done[cur];
+    save(); render();
+  });
+  el.reset.addEventListener('click', function(){
+    cur = 0; done = {}; setRun(false); save(); render();
+  });
+
+  applyZoom();
+  applyPageZoom();
+  render();
+})();
+</script>
+</body>
+</html>

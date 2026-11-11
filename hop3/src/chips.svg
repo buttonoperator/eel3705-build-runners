@@ -1,0 +1,325 @@
+<svg id="cm" viewBox="0 0 722 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pin map of every IC in the build, with the logic levels each one produces"><g class="pkgwrap">
+<rect class="cbody" id="c-U1" x="30.0" y="40.0" width="104.0" height="158.0" rx="6"/>
+<path class="cnotch" d="M 73.0 40.0 a 9 9 0 0 0 18 0"/>
+<text class="cref" x="82.0" y="62.0">U1</text>
+<text class="cpart" x="82.0" y="75.0">NE555</text>
+<g class="pin" id="p-U1-1" data-net="GND">
+<rect class="pad" x="6.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="17.5" y="97.8">1</text>
+<text class="pnet pnl" x="37.0" y="94.8">GND</text>
+</g>
+<g class="pin" id="p-U1-8" data-net="VCC">
+<rect class="pad" x="135.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="146.5" y="97.8">8</text>
+<text class="pnet pnr" x="127.0" y="94.8">+5</text>
+<text class="pds pnr" x="127.0" y="104.4">VCC</text>
+</g>
+<g class="pin" id="p-U1-2" data-net="T_CAP">
+<rect class="pad" x="6.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="17.5" y="123.8">2</text>
+<text class="pnet pnl" x="37.0" y="120.8">T_CAP</text>
+<text class="pds pnl" x="37.0" y="130.4">TRIG</text>
+</g>
+<g class="pin" id="p-U1-7" data-net="T_MID">
+<rect class="pad" x="135.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="146.5" y="123.8">7</text>
+<text class="pnet pnr" x="127.0" y="120.8">T_MID</text>
+<text class="pds pnr" x="127.0" y="130.4">DISCH</text>
+</g>
+<g class="pin" id="p-U1-3" data-net="CLK">
+<rect class="pad" x="6.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="17.5" y="149.8">3</text>
+<text class="pnet pnl" x="37.0" y="146.8">CLK</text>
+<text class="pds pnl" x="37.0" y="156.4">OUT</text>
+</g>
+<g class="pin" id="p-U1-6" data-net="T_CAP">
+<rect class="pad" x="135.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="146.5" y="149.8">6</text>
+<text class="pnet pnr" x="127.0" y="146.8">T_CAP</text>
+<text class="pds pnr" x="127.0" y="156.4">THRES</text>
+</g>
+<g class="pin" id="p-U1-4" data-net="VCC">
+<rect class="pad" x="6.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="17.5" y="175.8">4</text>
+<text class="pnet pnl" x="37.0" y="172.8">+5</text>
+<text class="pds pnl" x="37.0" y="182.4">RESET</text>
+</g>
+<g class="pin dead" id="p-U1-5">
+<rect class="pad" x="135.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="146.5" y="175.8">5</text>
+<text class="pnet pnr" x="127.0" y="172.8">n/c</text>
+<text class="pds pnr" x="127.0" y="182.4">CTRL</text>
+</g>
+<line class="rostem" x1="82.0" y1="198.0" x2="82.0" y2="330.0"/>
+<g class="ro" id="ro-U1">
+<rect class="robox" x="6.0" y="330.0" width="150.0" height="50.0" rx="7"/>
+<rect class="robar" x="6.0" y="337.0" width="3.5" height="36.0" rx="2"/>
+<text class="rotag" id="rotag-U1" x="17.0" y="345.0">TARGET</text>
+<text class="rol1" id="rol1-U1" x="17.0" y="360.0"></text>
+<text class="rol2" id="rol2-U1" x="17.0" y="373.0"></text>
+</g>
+</g>
+<g class="pkgwrap">
+<rect class="cbody" id="c-U2" x="205.0" y="40.0" width="104.0" height="236.0" rx="6"/>
+<path class="cnotch" d="M 248.0 40.0 a 9 9 0 0 0 18 0"/>
+<text class="cref" x="257.0" y="62.0">U2</text>
+<text class="cpart" x="257.0" y="75.0">74LS90</text>
+<g class="pin" id="p-U2-1" data-net="Q0">
+<rect class="pad" x="181.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="192.5" y="97.8">1</text>
+<text class="pnet pnl" x="212.0" y="94.8">Q0</text>
+<text class="pds pnl" x="212.0" y="104.4">CKB</text>
+</g>
+<g class="pin" id="p-U2-14" data-net="CLK">
+<rect class="pad" x="310.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="321.5" y="97.8">14</text>
+<text class="pnet pnr" x="302.0" y="94.8">CLK</text>
+<text class="pds pnr" x="302.0" y="104.4">CKA</text>
+</g>
+<g class="pin" id="p-U2-2" data-net="GND">
+<rect class="pad" x="181.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="192.5" y="123.8">2</text>
+<text class="pnet pnl" x="212.0" y="120.8">0</text>
+<text class="pds pnl" x="212.0" y="130.4">R0(1)</text>
+</g>
+<g class="pin dead" id="p-U2-13">
+<rect class="pad" x="310.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="321.5" y="123.8">13</text>
+<text class="pnet pnr" x="302.0" y="120.8">n/c</text>
+<text class="pds pnr" x="302.0" y="130.4">NC</text>
+</g>
+<g class="pin" id="p-U2-3" data-net="GND">
+<rect class="pad" x="181.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="192.5" y="149.8">3</text>
+<text class="pnet pnl" x="212.0" y="146.8">0</text>
+<text class="pds pnl" x="212.0" y="156.4">R0(2)</text>
+</g>
+<g class="pin" id="p-U2-12" data-net="Q0">
+<rect class="pad" x="310.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="321.5" y="149.8">12</text>
+<text class="pnet pnr" x="302.0" y="146.8">Q0</text>
+<text class="pds pnr" x="302.0" y="156.4">QA</text>
+</g>
+<g class="pin dead" id="p-U2-4">
+<rect class="pad" x="181.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="192.5" y="175.8">4</text>
+<text class="pnet pnl" x="212.0" y="172.8">n/c</text>
+<text class="pds pnl" x="212.0" y="182.4">NC</text>
+</g>
+<g class="pin" id="p-U2-11" data-net="Q3">
+<rect class="pad" x="310.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="321.5" y="175.8">11</text>
+<text class="pnet pnr" x="302.0" y="172.8">Q3</text>
+<text class="pds pnr" x="302.0" y="182.4">QD</text>
+</g>
+<g class="pin" id="p-U2-5" data-net="VCC">
+<rect class="pad" x="181.0" y="190.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="192.5" y="201.8">5</text>
+<text class="pnet pnl" x="212.0" y="198.8">+5</text>
+<text class="pds pnl" x="212.0" y="208.4">VCC</text>
+</g>
+<g class="pin" id="p-U2-10" data-net="GND">
+<rect class="pad" x="310.0" y="190.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="321.5" y="201.8">10</text>
+<text class="pnet pnr" x="302.0" y="198.8">GND</text>
+</g>
+<g class="pin" id="p-U2-6" data-net="GND">
+<rect class="pad" x="181.0" y="216.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="192.5" y="227.8">6</text>
+<text class="pnet pnl" x="212.0" y="224.8">0</text>
+<text class="pds pnl" x="212.0" y="234.4">R9(1)</text>
+</g>
+<g class="pin" id="p-U2-9" data-net="Q1">
+<rect class="pad" x="310.0" y="216.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="321.5" y="227.8">9</text>
+<text class="pnet pnr" x="302.0" y="224.8">Q1</text>
+<text class="pds pnr" x="302.0" y="234.4">QB</text>
+</g>
+<g class="pin" id="p-U2-7" data-net="GND">
+<rect class="pad" x="181.0" y="242.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="192.5" y="253.8">7</text>
+<text class="pnet pnl" x="212.0" y="250.8">0</text>
+<text class="pds pnl" x="212.0" y="260.4">R9(2)</text>
+</g>
+<g class="pin" id="p-U2-8" data-net="Q2">
+<rect class="pad" x="310.0" y="242.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="321.5" y="253.8">8</text>
+<text class="pnet pnr" x="302.0" y="250.8">Q2</text>
+<text class="pds pnr" x="302.0" y="260.4">QC</text>
+</g>
+<line class="rostem" x1="257.0" y1="276.0" x2="257.0" y2="330.0"/>
+<g class="ro" id="ro-U2">
+<rect class="robox" x="181.0" y="330.0" width="150.0" height="50.0" rx="7"/>
+<rect class="robar" x="181.0" y="337.0" width="3.5" height="36.0" rx="2"/>
+<text class="rotag" id="rotag-U2" x="192.0" y="345.0">TARGET</text>
+<text class="rol1" id="rol1-U2" x="192.0" y="360.0"></text>
+<text class="rol2" id="rol2-U2" x="192.0" y="373.0"></text>
+</g>
+</g>
+<g class="pkgwrap">
+<rect class="cbody" id="c-U3" x="380.0" y="40.0" width="104.0" height="262.0" rx="6"/>
+<path class="cnotch" d="M 423.0 40.0 a 9 9 0 0 0 18 0"/>
+<text class="cref" x="432.0" y="62.0">U3</text>
+<text class="cpart" x="432.0" y="75.0">CD4511</text>
+<g class="pin" id="p-U3-1" data-net="Q1">
+<rect class="pad" x="356.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="97.8">1</text>
+<text class="pnet pnl" x="387.0" y="94.8">Q1</text>
+<text class="pds pnl" x="387.0" y="104.4">B</text>
+</g>
+<g class="pin" id="p-U3-16" data-net="VCC">
+<rect class="pad" x="485.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="97.8">16</text>
+<text class="pnet pnr" x="477.0" y="94.8">+5</text>
+<text class="pds pnr" x="477.0" y="104.4">VDD</text>
+</g>
+<g class="pin" id="p-U3-2" data-net="Q2">
+<rect class="pad" x="356.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="123.8">2</text>
+<text class="pnet pnl" x="387.0" y="120.8">Q2</text>
+<text class="pds pnl" x="387.0" y="130.4">C</text>
+</g>
+<g class="pin" id="p-U3-15" data-net="f">
+<rect class="pad" x="485.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="123.8">15</text>
+<text class="pnet pnr" x="477.0" y="120.8">f</text>
+</g>
+<g class="pin" id="p-U3-3" data-net="VCC">
+<rect class="pad" x="356.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="149.8">3</text>
+<text class="pnet pnl" x="387.0" y="146.8">+5</text>
+<text class="pds pnl" x="387.0" y="156.4">/LT</text>
+</g>
+<g class="pin" id="p-U3-14" data-net="g">
+<rect class="pad" x="485.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="149.8">14</text>
+<text class="pnet pnr" x="477.0" y="146.8">g</text>
+</g>
+<g class="pin" id="p-U3-4" data-net="VCC">
+<rect class="pad" x="356.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="175.8">4</text>
+<text class="pnet pnl" x="387.0" y="172.8">+5</text>
+<text class="pds pnl" x="387.0" y="182.4">/BL</text>
+</g>
+<g class="pin" id="p-U3-13" data-net="a">
+<rect class="pad" x="485.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="175.8">13</text>
+<text class="pnet pnr" x="477.0" y="172.8">a</text>
+</g>
+<g class="pin" id="p-U3-5" data-net="GND">
+<rect class="pad" x="356.0" y="190.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="201.8">5</text>
+<text class="pnet pnl" x="387.0" y="198.8">0</text>
+<text class="pds pnl" x="387.0" y="208.4">LE</text>
+</g>
+<g class="pin" id="p-U3-12" data-net="b">
+<rect class="pad" x="485.0" y="190.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="201.8">12</text>
+<text class="pnet pnr" x="477.0" y="198.8">b</text>
+</g>
+<g class="pin" id="p-U3-6" data-net="Q3">
+<rect class="pad" x="356.0" y="216.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="227.8">6</text>
+<text class="pnet pnl" x="387.0" y="224.8">Q3</text>
+<text class="pds pnl" x="387.0" y="234.4">D</text>
+</g>
+<g class="pin" id="p-U3-11" data-net="c">
+<rect class="pad" x="485.0" y="216.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="227.8">11</text>
+<text class="pnet pnr" x="477.0" y="224.8">c</text>
+</g>
+<g class="pin" id="p-U3-7" data-net="Q0">
+<rect class="pad" x="356.0" y="242.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="253.8">7</text>
+<text class="pnet pnl" x="387.0" y="250.8">Q0</text>
+<text class="pds pnl" x="387.0" y="260.4">A</text>
+</g>
+<g class="pin" id="p-U3-10" data-net="d">
+<rect class="pad" x="485.0" y="242.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="253.8">10</text>
+<text class="pnet pnr" x="477.0" y="250.8">d</text>
+</g>
+<g class="pin" id="p-U3-8" data-net="GND">
+<rect class="pad" x="356.0" y="268.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="367.5" y="279.8">8</text>
+<text class="pnet pnl" x="387.0" y="276.8">GND</text>
+<text class="pds pnl" x="387.0" y="286.4">VSS</text>
+</g>
+<g class="pin" id="p-U3-9" data-net="e">
+<rect class="pad" x="485.0" y="268.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="496.5" y="279.8">9</text>
+<text class="pnet pnr" x="477.0" y="276.8">e</text>
+</g>
+<line class="rostem" x1="432.0" y1="302.0" x2="432.0" y2="330.0"/>
+<g class="ro" id="ro-U3">
+<rect class="robox" x="356.0" y="330.0" width="150.0" height="50.0" rx="7"/>
+<rect class="robar" x="356.0" y="337.0" width="3.5" height="36.0" rx="2"/>
+<text class="rotag" id="rotag-U3" x="367.0" y="345.0">TARGET</text>
+<text class="rol1" id="rol1-U3" x="367.0" y="360.0"></text>
+<text class="rol2" id="rol2-U3" x="367.0" y="373.0"></text>
+</g>
+</g>
+<g class="pkgwrap">
+<rect class="cbody" id="c-DS1" x="555.0" y="40.0" width="104.0" height="184.0" rx="6"/>
+<path class="cnotch" d="M 598.0 40.0 a 9 9 0 0 0 18 0"/>
+<text class="cref" x="607.0" y="62.0">DS1</text>
+<text class="cpart" x="607.0" y="75.0">7-seg CC</text>
+<g class="pin" id="p-DS1-1" data-net="e">
+<rect class="pad" x="531.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="542.5" y="97.8">1</text>
+<text class="pnet pnl" x="562.0" y="94.8">e</text>
+</g>
+<g class="pin" id="p-DS1-10" data-net="g">
+<rect class="pad" x="660.0" y="86.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="671.5" y="97.8">10</text>
+<text class="pnet pnr" x="652.0" y="94.8">g</text>
+</g>
+<g class="pin" id="p-DS1-2" data-net="d">
+<rect class="pad" x="531.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="542.5" y="123.8">2</text>
+<text class="pnet pnl" x="562.0" y="120.8">d</text>
+</g>
+<g class="pin" id="p-DS1-9" data-net="f">
+<rect class="pad" x="660.0" y="112.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="671.5" y="123.8">9</text>
+<text class="pnet pnr" x="652.0" y="120.8">f</text>
+</g>
+<g class="pin" id="p-DS1-3" data-net="GND">
+<rect class="pad" x="531.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="542.5" y="149.8">3</text>
+<text class="pnet pnl" x="562.0" y="146.8">CC</text>
+</g>
+<g class="pin" id="p-DS1-8" data-net="GND">
+<rect class="pad" x="660.0" y="138.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="671.5" y="149.8">8</text>
+<text class="pnet pnr" x="652.0" y="146.8">CC</text>
+</g>
+<g class="pin" id="p-DS1-4" data-net="c">
+<rect class="pad" x="531.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="542.5" y="175.8">4</text>
+<text class="pnet pnl" x="562.0" y="172.8">c</text>
+</g>
+<g class="pin" id="p-DS1-7" data-net="a">
+<rect class="pad" x="660.0" y="164.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="671.5" y="175.8">7</text>
+<text class="pnet pnr" x="652.0" y="172.8">a</text>
+</g>
+<g class="pin dead" id="p-DS1-5">
+<rect class="pad" x="531.0" y="190.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="542.5" y="201.8">5</text>
+<text class="pnet pnl" x="562.0" y="198.8">dp</text>
+</g>
+<g class="pin" id="p-DS1-6" data-net="b">
+<rect class="pad" x="660.0" y="190.0" width="23.0" height="16.0" rx="3"/>
+<text class="pnum" x="671.5" y="201.8">6</text>
+<text class="pnet pnr" x="652.0" y="198.8">b</text>
+</g>
+<line class="rostem" x1="607.0" y1="224.0" x2="607.0" y2="330.0"/>
+<g class="ro" id="ro-DS1">
+<rect class="robox" x="531.0" y="330.0" width="150.0" height="50.0" rx="7"/>
+<rect class="robar" x="531.0" y="337.0" width="3.5" height="36.0" rx="2"/>
+<text class="rotag" id="rotag-DS1" x="542.0" y="345.0">TARGET</text>
+<text class="rol1" id="rol1-DS1" x="542.0" y="360.0"></text>
+<text class="rol2" id="rol2-DS1" x="542.0" y="373.0"></text>
+</g>
+</g></svg>

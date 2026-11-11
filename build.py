@@ -1,33 +1,32 @@
 # -*- coding: utf-8 -*-
-"""Regenerate every diagram and reassemble index.html.
+"""Rebuild every project page, or the ones named.
 
-    python build.py
+    python build.py            # all projects
+    python build.py hop3       # just one
 
-Runs the three SVG generators, then inlines their output into src/template.html
-and writes the single-file page to index.html at the repository root.
+Each project folder has its own build.py, which regenerates that project's diagrams and
+writes its index.html. This script runs them in turn and stops on the first failure.
 """
 import os
 import subprocess
 import sys
 
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
-STAGES = [
-    ('gen.py', 'breadboard placement diagram'),
-    ('gen2.py', 'signal flow schematic'),
-    ('gen3.py', 'IC pin map'),
-    ('build.py', 'page assembly and checks'),
-]
+ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECTS = ['hop2', 'hop3']
 
 
-def main():
-    for script, what in STAGES:
-        print('==> %-10s %s' % (script, what))
-        r = subprocess.run([sys.executable, '-I', script], cwd=SRC)
+def main(argv):
+    names = argv or PROJECTS
+    for name in names:
+        if name not in PROJECTS:
+            print('unknown project %r; choose from %s' % (name, ', '.join(PROJECTS)))
+            return 2
+        print('\n######## %s' % name)
+        r = subprocess.run([sys.executable, '-I', 'build.py'], cwd=os.path.join(ROOT, name))
         if r.returncode:
             return r.returncode
-    print('\nindex.html written.')
     return 0
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
